@@ -6,17 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0c0c0b">
-<title>Ilian & Lola</title>
-
-<!-- iOS home screen icon & name -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Money">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='38' fill='%230c0c0b'/%3E%3Crect width='180' height='180' rx='38' fill='none' stroke='%23ffffff' stroke-width='6' stroke-opacity='0.15'/%3E%3Ctext x='52' y='118' font-family='Georgia,serif' font-size='88' font-weight='bold' fill='white' text-anchor='middle'%3EI%3C/text%3E%3Ctext x='130' y='118' font-family='Georgia,serif' font-size='88' font-weight='bold' fill='%23d4f050' text-anchor='middle'%3EL%3C/text%3E%3Cline x1='90' y1='28' x2='90' y2='152' stroke='%23ffffff' stroke-width='2' stroke-opacity='0.2'/%3E%3C/svg%3E">
-
-<!-- Android / PWA -->
-<meta name="application-name" content="Money">
-<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Ilian%20%26%20Lola%22%2C%22short_name%22%3A%22Money%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230c0c0b%22%2C%22theme_color%22%3A%22%230c0c0b%22%7D">
+<title>Ilian & Lola — Financial Planner</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -56,6 +46,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-m);font-size:
 .sync-label{font-size:10px;color:var(--muted);letter-spacing:0.05em;}
 
 /* ── PROFILE TABS ── */
+.profile-bar{display:flex;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.profile-tab{flex:1;padding:10px;text-align:center;font-size:12px;letter-spacing:0.05em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-family:var(--font-m);}
+.profile-tab.active-ilian{color:var(--ilian);border-bottom-color:var(--ilian);}
+.profile-tab.active-lola{color:var(--lola);border-bottom-color:var(--lola);}
+.profile-tab.shared-tab.active{color:var(--accent2);border-bottom-color:var(--accent2);}
 
 /* ── CONTENT AREA ── */
 .content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 1rem);}
@@ -172,8 +167,8 @@ canvas{width:100%!important;}
   .app{flex-direction:row;}
   .sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);height:100vh;overflow-y:auto;}
   .bottom-nav{display:none;}
-    .header{border-bottom:1px solid var(--border);}
   .main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .header{border-bottom:1px solid var(--border);}
   .content{padding-bottom:1rem;}
   .sidebar-logo{padding:1.5rem 1.25rem 1rem;border-bottom:1px solid var(--border);}
   .sidebar-logo h1{font-family:var(--font-d);font-size:1.1rem;font-weight:400;}
@@ -185,14 +180,8 @@ canvas{width:100%!important;}
   .sidebar-nav-item.active{color:var(--accent);border-left-color:var(--accent);background:var(--surface2);}
   .sidebar-nav-item svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;flex-shrink:0;}
   .sidebar-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);}
-  .panel{max-width:960px;padding:1.5rem 2rem;}
+  .panel{max-width:900px;padding:1.5rem;}
   .g2{gap:1rem;} .g3{gap:0.75rem;} .g4{gap:0.75rem;}
-  /* Desktop: show profile switcher inside sidebar instead */
-  .sidebar-profile{display:flex;gap:6px;padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);}
-  .sp-btn{flex:1;padding:6px 8px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--font-m);font-size:11px;cursor:pointer;transition:all 0.15s;text-align:center;}
-  .sp-btn.sp-ilian{color:var(--ilian);border-color:var(--ilian);}
-  .sp-btn.sp-lola{color:var(--lola);border-color:var(--lola);}
-  .sp-btn.inactive{color:var(--muted2);border-color:var(--border);}
 }
 @media(max-width:767px){
   .sidebar{display:none;}
@@ -219,16 +208,16 @@ canvas{width:100%!important;}
   </div>
 </div>
 
-<!-- PROFILE PICKER (shown after load if no saved profile) -->
+<!-- ACCOUNT PICKER -->
 <div class="app" id="pickerScreen" style="display:none;">
   <div class="loading">
-    <div class="loading-logo" style="margin-bottom:0.5rem;">Ilian <em>&</em> Lola</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:2rem;letter-spacing:0.05em;">Who are you?</p>
+    <div class="loading-logo" style="margin-bottom:0.25rem;">Ilian <em>&</em> Lola</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:2.5rem;letter-spacing:0.06em;text-transform:uppercase;">Who are you?</p>
     <div style="display:flex;gap:1rem;">
-      <button onclick="choosePerson('ilian')" style="background:var(--surface);border:1px solid var(--ilian);color:var(--ilian);font-family:var(--font-m);font-size:14px;padding:14px 32px;border-radius:var(--radius);cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;">Ilian</button>
-      <button onclick="choosePerson('lola')" style="background:var(--surface);border:1px solid var(--lola);color:var(--lola);font-family:var(--font-m);font-size:14px;padding:14px 32px;border-radius:var(--radius);cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;">Lola</button>
+      <button id="pickIlian" onclick="choosePerson('ilian')" style="background:var(--surface);border:2px solid var(--ilian);color:var(--ilian);font-family:var(--font-m);font-size:15px;padding:16px 36px;border-radius:var(--radius);cursor:pointer;letter-spacing:0.05em;transition:all 0.15s;">Ilian</button>
+      <button id="pickLola" onclick="choosePerson('lola')" style="background:var(--surface);border:2px solid var(--lola);color:var(--lola);font-family:var(--font-m);font-size:15px;padding:16px 36px;border-radius:var(--radius);cursor:pointer;letter-spacing:0.05em;transition:all 0.15s;">Lola</button>
     </div>
-    <p style="font-size:10px;color:var(--muted2);margin-top:2rem;letter-spacing:0.05em;">We will remember your choice on this device.</p>
+    <p style="font-size:10px;color:var(--muted2);margin-top:2rem;">Remembered on this device next time.</p>
   </div>
 </div>
 
@@ -241,11 +230,9 @@ canvas{width:100%!important;}
       <h1>Ilian <em>&</em> Lola</h1>
       <p>Financial Planner · CAD</p>
     </div>
-
-    <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
-      <div id="sidebarDot" style="width:8px;height:8px;border-radius:50%;background:var(--ilian);flex-shrink:0;"></div>
-      <span id="sidebarName" style="font-size:12px;color:var(--text);font-family:var(--font-m);flex:1;">Ilian</span>
-      <button onclick="forgetProfile()" style="background:transparent;border:none;font-size:10px;color:var(--muted);cursor:pointer;font-family:var(--font-m);letter-spacing:0.04em;padding:2px 0;">switch ↩</button>
+    <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <span id="sidebarAccountName" style="font-size:12px;font-weight:500;color:var(--ilian);">—</span>
+      <button onclick="forgetProfile()" style="background:transparent;border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-family:var(--font-m);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:0.04em;transition:all 0.15s;">switch</button>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-nav-item active" onclick="switchPanel('budget')">
@@ -284,7 +271,6 @@ canvas{width:100%!important;}
         <button class="btn" style="font-size:10px;padding:6px 10px;" onclick="document.getElementById('importFile').click()">Restore</button>
       </div>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
-      <button class="btn" style="font-size:10px;padding:6px 10px;margin-top:6px;width:100%;" onclick="forgetProfile()">Switch account</button>
     </div>
   </aside>
 
@@ -293,15 +279,20 @@ canvas{width:100%!important;}
     <header class="header">
       <div class="header-logo">Ilian <em>&</em> Lola</div>
       <div class="header-right">
-        <div class="sync-dot" id="syncDot"></div>
-        <span class="sync-label" id="syncLabel" style="margin-right:10px;">Connecting...</span>
-        <button id="profilePill" onclick="forgetProfile()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:5px 12px 5px 8px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:all 0.15s;font-family:var(--font-m);">
-          <div id="pillDot" style="width:8px;height:8px;border-radius:50%;background:var(--ilian);flex-shrink:0;"></div>
-          <span id="pillName" style="font-size:12px;color:var(--text);letter-spacing:0.04em;">Ilian</span>
-          <span style="font-size:10px;color:var(--muted);">↩</span>
+        <button id="accountBadge" onclick="forgetProfile()" style="background:transparent;border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-family:var(--font-m);font-size:11px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px;letter-spacing:0.04em;">
+          <span id="accountName" style="font-weight:500;">—</span>
+          <span style="color:var(--muted);font-size:10px;">switch</span>
         </button>
+        <div class="sync-dot" id="syncDot" style="margin-left:6px;"></div>
+        <span class="sync-label" id="syncLabel">Connecting...</span>
       </div>
     </header>
+
+    <!-- PROFILE BAR -->
+    <div class="profile-bar" id="profileBar" style="display:none;">
+      <div class="profile-tab active-ilian" id="pt-ilian" onclick="switchProfile('ilian')">Ilian</div>
+      <div class="profile-tab" id="pt-lola" onclick="switchProfile('lola')">Lola</div>
+    </div>
 
     <!-- CONTENT -->
     <div class="content">
@@ -551,7 +542,6 @@ canvas{width:100%!important;}
       <button class="btn" onclick="switchPanel('checkin');closeMore()">📝 Check-In</button>
       <button class="btn" onclick="exportPDF();closeMore()">📄 Export PDF</button>
       <button class="btn" onclick="exportJSON();closeMore()">💾 Backup</button>
-      <button class="btn" style="grid-column:1/-1;" onclick="forgetProfile();closeMore()">↩ Switch account</button>
     </div>
     <div style="padding:0 0.75rem 0.75rem;text-align:center;">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
@@ -663,9 +653,13 @@ function showToast(msg) {
 // ── FIREBASE ──────────────────────────────────────────────────────────────────
 const dbRef = ref(db, 'planner');
 
-// ── PROFILE MEMORY ───────────────────────────────────────────────────────────
-function getSavedProfile(){ return localStorage.getItem('fp_person'); }
-function saveProfileChoice(prof){ localStorage.setItem('fp_person', prof); }
+// ── ACCOUNT MEMORY ────────────────────────────────────────────────────────────
+window.choosePerson = function(prof) {
+  localStorage.setItem('fp_person', prof);
+  document.getElementById('pickerScreen').style.display='none';
+  document.getElementById('mainApp').style.display='flex';
+  switchProfile(prof);
+};
 
 window.forgetProfile = function() {
   localStorage.removeItem('fp_person');
@@ -673,59 +667,43 @@ window.forgetProfile = function() {
   document.getElementById('pickerScreen').style.display='flex';
 };
 
-window.choosePerson = function(prof) {
-  saveProfileChoice(prof);
-  currentProfile = prof;
-  document.getElementById('pickerScreen').style.display='none';
-  document.getElementById('mainApp').style.display='flex';
-  switchProfile(prof);
-};
-
-function showAppWithProfile(prof) {
-  currentProfile = prof;
+function launchApp(remote) {
+  if(remote) {
+    state.ilian={...DEFAULT.ilian,...(remote.ilian||{})};
+    state.lola={...DEFAULT.lola,...(remote.lola||{})};
+    state.shared={...DEFAULT.shared,...(remote.shared||{})};
+  }
+  const saved=localStorage.getItem('fp_person');
   document.getElementById('loadingScreen').style.display='none';
-  document.getElementById('pickerScreen').style.display='none';
-  document.getElementById('mainApp').style.display='flex';
-  switchProfile(prof);
+  if(saved==='ilian'||saved==='lola'){
+    document.getElementById('mainApp').style.display='flex';
+    switchProfile(saved);
+  } else {
+    document.getElementById('pickerScreen').style.display='flex';
+  }
 }
 
+let launched = false;
 onValue(dbRef, (snapshot) => {
   const remote = snapshot.val();
-  if(remote) {
-    isRemoteUpdate = true;
-    state.ilian = {...DEFAULT.ilian,...(remote.ilian||{})};
-    state.lola = {...DEFAULT.lola,...(remote.lola||{})};
-    state.shared = {...DEFAULT.shared,...(remote.shared||{})};
-    loadInputs();
-    renderAll();
-    setSyncStatus('live');
-    isRemoteUpdate = false;
-  }
-  // Show app after first load
-  if(document.getElementById('loadingScreen').style.display!=='none'){
-    if(!remote) { set(dbRef, state); }
-    const saved = getSavedProfile();
-    if(saved === 'ilian' || saved === 'lola') {
-      // remembered — go straight in
-      showAppWithProfile(saved);
-    } else {
-      // first time on this device — show picker
-      document.getElementById('loadingScreen').style.display='none';
-      document.getElementById('pickerScreen').style.display='flex';
+  if(!launched) {
+    launched = true;
+    if(!remote) set(dbRef, state);
+    launchApp(remote);
+  } else {
+    // live update from other device
+    if(remote) {
+      isRemoteUpdate = true;
+      state.ilian={...DEFAULT.ilian,...(remote.ilian||{})};
+      state.lola={...DEFAULT.lola,...(remote.lola||{})};
+      state.shared={...DEFAULT.shared,...(remote.shared||{})};
+      loadInputs(); renderAll(); setSyncStatus('live');
+      isRemoteUpdate = false;
     }
   }
 }, (error) => {
   setSyncStatus('error');
-  document.getElementById('loadingStatus').textContent = 'Connection failed.';
-  setTimeout(()=>{
-    const saved = getSavedProfile();
-    if(saved === 'ilian' || saved === 'lola') {
-      showAppWithProfile(saved);
-    } else {
-      document.getElementById('loadingScreen').style.display='none';
-      document.getElementById('pickerScreen').style.display='flex';
-    }
-  },2000);
+  if(!launched){ launched=true; launchApp(null); }
 });
 
 function pushProfile() {
@@ -802,19 +780,14 @@ window.closeMore = function(){document.getElementById('moreMenu').style.display=
 
 window.switchProfile = function(prof) {
   syncInputsToState();
-  currentProfile = prof;
-
-  // update profile pill in header
-  const pillName=document.getElementById('pillName');
-  const pillDot=document.getElementById('pillDot');
-  if(pillName) pillName.textContent=prof.charAt(0).toUpperCase()+prof.slice(1);
-  if(pillDot) pillDot.style.background=prof==='ilian'?'var(--ilian)':'var(--lola)';
-  // update sidebar profile buttons if present
-  const spI=document.getElementById('sp-ilian');const spL=document.getElementById('sp-lola');
-  if(spI)spI.className='sp-btn'+(prof==='ilian'?' sp-ilian':' inactive');
-  if(spL)spL.className='sp-btn'+(prof==='lola'?' sp-lola':' inactive');
-
-
+  currentProfile = prof==='shared'?'ilian':prof;
+  document.getElementById('pt-ilian').className='profile-tab'+(prof==='ilian'?' active-ilian':'');
+  document.getElementById('pt-lola').className='profile-tab'+(prof==='lola'?' active-lola':'');
+  // update account badge
+  const name = prof.charAt(0).toUpperCase()+prof.slice(1);
+  const color = prof==='ilian'?'var(--ilian)':'var(--lola)';
+  const ab=document.getElementById('accountName'); if(ab){ab.textContent=name;ab.style.color=color;}
+  const sb=document.getElementById('sidebarAccountName'); if(sb){sb.textContent=name;sb.style.color=color;}
   loadInputs(); renderAll();
 };
 

@@ -277,7 +277,7 @@ canvas{width:100%!important;}
   <!-- MAIN AREA -->
   <div class="main-area">
     <header class="header">
-      <div class="header-logo">Ilian <em>&</em> Lola</div>
+      <div class="header-logo" id="eggTrigger" style="cursor:default;user-select:none;">Ilian <em>&</em> Lola</div>
       <div class="header-right">
         <button id="accountBadge" onclick="forgetProfile()" style="background:transparent;border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-family:var(--font-m);font-size:11px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px;letter-spacing:0.04em;">
           <span id="accountName" style="font-weight:500;">—</span>
@@ -531,6 +531,41 @@ canvas{width:100%!important;}
   </div><!-- /main-area -->
 </div><!-- /mainApp -->
 
+<!-- EASTER EGG OVERLAY -->
+<div class="egg-overlay" id="eggOverlay">
+  <div class="egg-header">
+    <div>
+      <div class="egg-title">Ilian <em>&</em> Lola 🤍</div>
+      <div class="egg-storage" id="eggStorage">Loading storage info...</div>
+      <div class="egg-bar-wrap"><div class="egg-bar" id="eggBar" style="width:0%"></div></div>
+    </div>
+    <button class="egg-close" onclick="closeEgg()">×</button>
+  </div>
+  <div class="egg-grid" id="eggGrid"></div>
+  <div class="egg-footer">
+    <label class="egg-upload-btn" for="eggFileInput" id="eggUploadLabel">+ Add photo or video</label>
+    <input type="file" id="eggFileInput" accept="image/*,video/*" multiple style="display:none" onchange="uploadFiles(this.files)">
+    <span class="egg-uploading" id="eggUploading" style="display:none;">Uploading...</span>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="egg-lightbox" id="eggLightbox" onclick="closeLightbox()">
+  <button class="egg-lightbox-close" onclick="closeLightbox()">×</button>
+  <div id="eggLightboxContent"></div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="egg-confirm" id="eggConfirm">
+  <div class="egg-confirm-box">
+    <p>Delete this? This cannot be undone.</p>
+    <div class="egg-confirm-btns">
+      <button class="egg-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="egg-delete-confirm" id="eggDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- MORE MENU (mobile) -->
 <div id="moreMenu" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.7);" onclick="closeMore()">
   <div style="position:absolute;bottom:calc(var(--nav-h) + var(--safe-bottom));left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:0.5rem;" onclick="event.stopPropagation()">
@@ -555,6 +590,7 @@ canvas{width:100%!important;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject, listAll, getMetadata } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB5CX_m9Yy9XYOpQZwjQ1ZsRFAmTgn4YmE",
@@ -568,6 +604,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const storage = getStorage(app);
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT = {
@@ -1218,6 +1255,135 @@ window.switchPanel = window.switchPanel;
 window.switchProfile = window.switchProfile;
 
 document.getElementById('loadingStatus').textContent = 'Loading your data...';
+
+// ── EASTER EGG ────────────────────────────────────────────────────────────────
+let eggTaps = 0, eggTimer = null;
+document.getElementById('eggTrigger').addEventListener('click', () => {
+  eggTaps++;
+  clearTimeout(eggTimer);
+  eggTimer = setTimeout(() => { eggTaps = 0; }, 1500);
+  if(eggTaps >= 5) { eggTaps = 0; openEgg(); }
+});
+
+const STORAGE_LIMIT = 1073741824; // 1GB in bytes
+
+window.openEgg = async function() {
+  document.getElementById('eggOverlay').classList.add('open');
+  await loadGallery();
+  await loadStorageInfo();
+};
+
+window.closeEgg = function() {
+  document.getElementById('eggOverlay').classList.remove('open');
+};
+
+async function loadStorageInfo() {
+  try {
+    const listRef = sRef(storage, 'gallery/');
+    const list = await listAll(listRef);
+    let totalBytes = 0;
+    await Promise.all(list.items.map(async item => {
+      const meta = await getMetadata(item);
+      totalBytes += meta.size;
+    }));
+    const usedMB = (totalBytes / 1048576).toFixed(1);
+    const usedGB = (totalBytes / STORAGE_LIMIT * 100).toFixed(1);
+    document.getElementById('eggStorage').textContent = `Used ${usedMB} MB of 1 GB`;
+    document.getElementById('eggBar').style.width = Math.min(100, parseFloat(usedGB)) + '%';
+    document.getElementById('eggBar').style.background = parseFloat(usedGB) > 80 ? 'var(--red)' : parseFloat(usedGB) > 60 ? 'var(--accent3)' : 'var(--accent)';
+  } catch(e) { document.getElementById('eggStorage').textContent = 'Storage info unavailable'; }
+}
+
+async function loadGallery() {
+  const grid = document.getElementById('eggGrid');
+  grid.innerHTML = '<div class="egg-empty">Loading your memories... 🤍</div>';
+  try {
+    const listRef = sRef(storage, 'gallery/');
+    const list = await listAll(listRef);
+    if(!list.items.length) {
+      grid.innerHTML = '<div class="egg-empty">No photos or videos yet.<br>Tap below to add your first one. 🤍</div>';
+      return;
+    }
+    // sort by name (timestamp-based)
+    const items = [...list.items].sort((a,b) => b.name.localeCompare(a.name));
+    grid.innerHTML = '';
+    await Promise.all(items.map(async item => {
+      const url = await getDownloadURL(item);
+      const isVideo = item.name.match(/\.(mp4|mov|avi|webm|mkv)$/i);
+      const div = document.createElement('div');
+      div.className = 'egg-item';
+      if(isVideo) {
+        div.innerHTML = `<video src="${url}" muted playsinline preload="metadata"></video>
+          <span class="egg-vid-badge">VIDEO</span>
+          <button class="egg-del" onclick="confirmDelete('${item.fullPath}', event)">×</button>`;
+        div.querySelector('video').addEventListener('click', () => openLightbox(url, true));
+      } else {
+        div.innerHTML = `<img src="${url}" loading="lazy">
+          <button class="egg-del" onclick="confirmDelete('${item.fullPath}', event)">×</button>`;
+        div.querySelector('img').addEventListener('click', () => openLightbox(url, false));
+      }
+      grid.appendChild(div);
+    }));
+  } catch(e) {
+    grid.innerHTML = '<div class="egg-empty">Could not load gallery.<br>Check your Firebase Storage rules.</div>';
+  }
+}
+
+window.uploadFiles = async function(files) {
+  if(!files.length) return;
+  const label = document.getElementById('eggUploadLabel');
+  const uploading = document.getElementById('eggUploading');
+  label.style.display = 'none';
+  uploading.style.display = 'block';
+  uploading.textContent = `Uploading 0 of ${files.length}...`;
+  let done = 0;
+  for(const file of files) {
+    const ext = file.name.split('.').pop();
+    const name = `gallery/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const fileRef = sRef(storage, name);
+    await uploadBytes(fileRef, file);
+    done++;
+    uploading.textContent = `Uploading ${done} of ${files.length}...`;
+  }
+  uploading.style.display = 'none';
+  label.style.display = 'block';
+  document.getElementById('eggFileInput').value = '';
+  await loadGallery();
+  await loadStorageInfo();
+};
+
+let pendingDeletePath = null;
+window.confirmDelete = function(path, e) {
+  e.stopPropagation();
+  pendingDeletePath = path;
+  document.getElementById('eggConfirm').classList.add('open');
+};
+window.closeConfirm = function() {
+  pendingDeletePath = null;
+  document.getElementById('eggConfirm').classList.remove('open');
+};
+document.getElementById('eggDeleteBtn').addEventListener('click', async () => {
+  if(!pendingDeletePath) return;
+  try {
+    await deleteObject(sRef(storage, pendingDeletePath));
+    closeConfirm();
+    await loadGallery();
+    await loadStorageInfo();
+  } catch(e) { closeConfirm(); }
+});
+
+window.openLightbox = function(url, isVideo) {
+  const lb = document.getElementById('eggLightbox');
+  const content = document.getElementById('eggLightboxContent');
+  content.innerHTML = isVideo
+    ? `<video src="${url}" controls autoplay style="max-width:95vw;max-height:85vh;border-radius:4px;"></video>`
+    : `<img src="${url}" style="max-width:95vw;max-height:85vh;object-fit:contain;border-radius:4px;">`;
+  lb.classList.add('open');
+};
+window.closeLightbox = function() {
+  document.getElementById('eggLightbox').classList.remove('open');
+  document.getElementById('eggLightboxContent').innerHTML = '';
+};
 </script>
 </body>
 </html>

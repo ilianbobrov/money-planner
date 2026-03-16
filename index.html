@@ -259,6 +259,9 @@ canvas{width:100%!important;}
       <div class="sidebar-nav-item" onclick="switchPanel('checkin')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Check-In
       </div>
+      <div class="sidebar-nav-item" onclick="switchPanel('notes')">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Notes
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
@@ -277,7 +280,7 @@ canvas{width:100%!important;}
   <!-- MAIN AREA -->
   <div class="main-area">
     <header class="header">
-      <div class="header-logo" id="eggTrigger" style="cursor:default;user-select:none;">Ilian <em>&</em> Lola</div>
+      <div class="header-logo">Ilian <em>&</em> Lola</div>
       <div class="header-right">
         <button id="accountBadge" onclick="forgetProfile()" style="background:transparent;border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-family:var(--font-m);font-size:11px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px;letter-spacing:0.04em;">
           <span id="accountName" style="font-weight:500;">—</span>
@@ -508,6 +511,18 @@ canvas{width:100%!important;}
         <div class="chart-wrap"><div class="chart-title">Income vs expenses over time</div><div style="position:relative;height:160px;"><canvas id="checkinChart"></canvas></div></div>
       </div>
 
+      <!-- NOTES -->
+      <div id="panel-notes" class="panel">
+        <div class="note-compose">
+          <textarea id="noteInput" placeholder="Write a note… supports **bold**, *italic*, - lists, ## headings"></textarea>
+          <div class="note-compose-footer">
+            <span class="note-compose-hint">Markdown supported · **bold** *italic* ## heading - list</span>
+            <button class="note-post-btn" onclick="postNote()" id="notePostBtn">Post</button>
+          </div>
+        </div>
+        <div class="notes-feed" id="notesFeed"></div>
+      </div>
+
     </div><!-- /content -->
 
     <!-- BOTTOM NAV (mobile) -->
@@ -530,6 +545,17 @@ canvas{width:100%!important;}
     </nav>
   </div><!-- /main-area -->
 </div><!-- /mainApp -->
+
+<!-- NOTE DELETE CONFIRM -->
+<div class="note-confirm" id="noteConfirm">
+  <div class="note-confirm-box">
+    <p>Delete this note?<br>This cannot be undone.</p>
+    <div class="note-confirm-btns">
+      <button class="nc-cancel" onclick="closeNoteConfirm()">Cancel</button>
+      <button class="nc-delete" id="noteDeleteBtn" onclick="executeNoteDelete()">Delete</button>
+    </div>
+  </div>
+</div>
 
 <!-- EASTER EGG OVERLAY -->
 <div class="egg-overlay" id="eggOverlay">
@@ -574,6 +600,7 @@ canvas{width:100%!important;}
       <button class="btn" onclick="switchPanel('networth');closeMore()">💰 Net Worth</button>
       <button class="btn" onclick="switchPanel('tax');closeMore()">🧾 Tax / TD1</button>
       <button class="btn" onclick="switchPanel('checkin');closeMore()">📝 Check-In</button>
+      <button class="btn" onclick="switchPanel('notes');closeMore()">💬 Notes</button>
       <button class="btn" onclick="exportPDF();closeMore()">📄 Export PDF</button>
       <button class="btn" onclick="exportJSON();closeMore()">💾 Backup</button>
     </div>
@@ -587,6 +614,7 @@ canvas{width:100%!important;}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
@@ -605,6 +633,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const storage = getStorage(app);
+
+// Expose to window for onclick handlers
+window._dbSet = set;
+window._dbUpdate = update;
+window._dbSRef = sRef;
+window._dbDeleteObject = deleteObject;
+window._storage = storage;
+window._getDownloadURL = getDownloadURL;
+window._listAll = listAll;
+window._getMetadata = getMetadata;
+window._uploadBytes = uploadBytes;
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT = {
@@ -642,6 +681,14 @@ const DEFAULT = {
   },
   shared:{rent:2000,rentPct:100,food:1300,foodPct:60,extras:[]},
 };
+
+// ── EXPOSE DB HELPERS TO WINDOW ──────────────────────────────────────────────
+window._dbRef = null;
+window._dbSet = null;
+window._dbUpdate = null;
+window._dbSRef = null;
+window._dbDeleteObject = null;
+window._storage = null;
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let state = JSON.parse(JSON.stringify(DEFAULT));
@@ -695,6 +742,7 @@ window.choosePerson = function(prof) {
   document.getElementById('pickerScreen').style.display='none';
   document.getElementById('mainApp').style.display='flex';
   switchProfile(prof);
+  setTimeout(setupEggTrigger, 300);
 };
 
 window.forgetProfile = function() {
@@ -708,6 +756,9 @@ function launchApp(remote) {
     state.ilian={...DEFAULT.ilian,...(remote.ilian||{})};
     state.lola={...DEFAULT.lola,...(remote.lola||{})};
     state.shared={...DEFAULT.shared,...(remote.shared||{})};
+    setSyncStatus('live');
+  } else {
+    setSyncStatus('error');
   }
   const saved=localStorage.getItem('fp_person');
   document.getElementById('loadingScreen').style.display='none';
@@ -717,6 +768,7 @@ function launchApp(remote) {
   } else {
     document.getElementById('pickerScreen').style.display='flex';
   }
+  setTimeout(setupEggTrigger, 500);
 }
 
 let launched = false;
@@ -807,7 +859,7 @@ window.switchPanel = function(name) {
     b.classList.toggle('active',names[i]===name);
   });
   document.querySelectorAll('.sidebar-nav-item').forEach((b,i)=>{
-    const names=['budget','debts','goals','invest','shared','networth','tax','checkin'];
+    const names=['budget','debts','goals','invest','shared','networth','tax','checkin','notes'];
     b.classList.toggle('active',names[i]===name);
   });
   setTimeout(()=>renderAll(),50);
@@ -1256,14 +1308,174 @@ window.switchProfile = window.switchProfile;
 
 document.getElementById('loadingStatus').textContent = 'Loading your data...';
 
-// ── EASTER EGG ────────────────────────────────────────────────────────────────
-let eggTaps = 0, eggTimer = null;
-document.getElementById('eggTrigger').addEventListener('click', () => {
-  eggTaps++;
-  clearTimeout(eggTimer);
-  eggTimer = setTimeout(() => { eggTaps = 0; }, 1500);
-  if(eggTaps >= 5) { eggTaps = 0; openEgg(); }
+// ── NOTES ────────────────────────────────────────────────────────────────────────
+const notesRef = ref(db, 'notes');
+
+// Listen for real-time note updates
+onValue(notesRef, (snapshot) => {
+  const notes = snapshot.val();
+  renderNotes(notes);
 });
+
+window.postNote = async function() {
+  const input = document.getElementById('noteInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const btn = document.getElementById('notePostBtn');
+  btn.disabled = true;
+  const note = {
+    author: currentProfile,
+    text,
+    timestamp: Date.now(),
+  };
+  const newRef = ref(db, 'notes/' + Date.now() + '_' + Math.random().toString(36).slice(2));
+  await set(newRef, note);
+  input.value = '';
+  btn.disabled = false;
+};
+
+// Post on Ctrl+Enter / Cmd+Enter
+document.addEventListener('keydown', (e) => {
+  if((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    const active = document.activeElement;
+    if(active && active.id === 'noteInput') postNote();
+    if(active && active.classList.contains('note-edit-area')) {
+      const id = active.dataset.id;
+      if(id) saveEdit(id, active.value);
+    }
+  }
+});
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if(m < 1) return 'just now';
+  if(m < 60) return m + 'm ago';
+  if(h < 24) return h + 'h ago';
+  if(d < 7) return d + 'd ago';
+  return new Date(ts).toLocaleDateString('en-CA', {month:'short',day:'numeric'});
+}
+
+function renderNotes(notesObj) {
+  const feed = document.getElementById('notesFeed');
+  if(!feed) return;
+  if(!notesObj || !Object.keys(notesObj).length) {
+    feed.innerHTML = '<div class="note-empty">No notes yet.<br>Write the first one above. 🤍</div>';
+    return;
+  }
+  // sort newest first
+  const sorted = Object.entries(notesObj).sort((a,b) => b[1].timestamp - a[1].timestamp);
+  feed.innerHTML = '';
+  sorted.forEach(([id, note]) => {
+    const isOwn = note.author === currentProfile;
+    const authorLabel = note.author.charAt(0).toUpperCase() + note.author.slice(1);
+    const div = document.createElement('div');
+    div.className = 'note-card note-' + note.author;
+    div.id = 'note-' + id;
+    div.innerHTML = `
+      <div class="note-header">
+        <span class="note-author ${note.author}">${authorLabel}</span>
+        <span class="note-time">${timeAgo(note.timestamp)}</span>
+      </div>
+      <div class="note-body" id="note-body-${id}">${marked.parse(note.text)}</div>
+      ${isOwn ? `
+      <div class="note-actions">
+        <button class="note-edit-btn" onclick="startEdit('${id}', this)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button class="note-del-btn" onclick="confirmNoteDelete('${id}')">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          Delete
+        </button>
+      </div>` : ''}
+    `;
+    feed.appendChild(div);
+  });
+}
+
+window.startEdit = function(id, btn) {
+  const body = document.getElementById('note-body-' + id);
+  const card = document.getElementById('note-' + id);
+  // get original text from firebase
+  const noteRef = ref(db, 'notes/' + id);
+  onValue(noteRef, (snap) => {
+    const note = snap.val();
+    if(!note) return;
+    body.style.display = 'none';
+    // hide actions
+    card.querySelectorAll('.note-actions').forEach(a => a.style.display='none');
+    // insert edit area
+    const editWrap = document.createElement('div');
+    editWrap.id = 'edit-wrap-' + id;
+    editWrap.style.marginTop = '8px';
+    editWrap.innerHTML = `
+      <textarea class="note-edit-area" data-id="${id}">${note.text}</textarea>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="note-save-btn" onclick="saveEdit('${id}', document.querySelector('.note-edit-area[data-id=${id}]').value)">Save</button>
+        <button class="note-cancel-btn" onclick="cancelEdit('${id}')">Cancel</button>
+      </div>`;
+    card.appendChild(editWrap);
+  }, {onlyOnce: true});
+};
+
+window.saveEdit = async function(id, newText) {
+  if(!newText.trim()) return;
+  await update(ref(db, 'notes/' + id), {text: newText.trim(), edited: Date.now()});
+  // cancelEdit to reset UI — onValue listener will re-render
+  cancelEdit(id);
+};
+
+window.cancelEdit = function(id) {
+  const body = document.getElementById('note-body-' + id);
+  const card = document.getElementById('note-' + id);
+  const wrap = document.getElementById('edit-wrap-' + id);
+  if(wrap) wrap.remove();
+  body.style.display = '';
+  card.querySelectorAll('.note-actions').forEach(a => a.style.display='');
+};
+
+let pendingNoteDelete = null;
+window.confirmNoteDelete = function(id) {
+  pendingNoteDelete = id;
+  document.getElementById('noteConfirm').classList.add('open');
+};
+window.closeNoteConfirm = function() {
+  pendingNoteDelete = null;
+  document.getElementById('noteConfirm').classList.remove('open');
+};
+window.executeNoteDelete = async function() {
+  if(!pendingNoteDelete) return;
+  const btn = document.getElementById('noteDeleteBtn');
+  btn.textContent = 'Deleting...';
+  btn.disabled = true;
+  try {
+    await window._dbSet(ref(db, 'notes/' + pendingNoteDelete), null);
+  } finally {
+    btn.textContent = 'Delete';
+    btn.disabled = false;
+    closeNoteConfirm();
+  }
+};
+
+// ── EASTER EGG ────────────────────────────────────────────────────────────────
+// Hidden trigger: long-press the account badge for 2 seconds
+let eggPressTimer = null;
+function setupEggTrigger() {
+  const badge = document.getElementById('accountBadge');
+  if(!badge) return;
+  badge.addEventListener('mousedown', () => {
+    eggPressTimer = setTimeout(() => { openEgg(); }, 2000);
+  });
+  badge.addEventListener('mouseup', () => clearTimeout(eggPressTimer));
+  badge.addEventListener('mouseleave', () => clearTimeout(eggPressTimer));
+  badge.addEventListener('touchstart', (e) => {
+    eggPressTimer = setTimeout(() => { openEgg(); }, 2000);
+  }, {passive:true});
+  badge.addEventListener('touchend', () => clearTimeout(eggPressTimer));
+}
 
 const STORAGE_LIMIT = 1073741824; // 1GB in bytes
 
@@ -1279,11 +1491,11 @@ window.closeEgg = function() {
 
 async function loadStorageInfo() {
   try {
-    const listRef = sRef(storage, 'gallery/');
-    const list = await listAll(listRef);
+    const listRef = window._dbSRef(window._storage, 'gallery/');
+    const list = await window._listAll(listRef);
     let totalBytes = 0;
     await Promise.all(list.items.map(async item => {
-      const meta = await getMetadata(item);
+      const meta = await window._getMetadata(item);
       totalBytes += meta.size;
     }));
     const usedMB = (totalBytes / 1048576).toFixed(1);
@@ -1298,8 +1510,8 @@ async function loadGallery() {
   const grid = document.getElementById('eggGrid');
   grid.innerHTML = '<div class="egg-empty">Loading your memories... 🤍</div>';
   try {
-    const listRef = sRef(storage, 'gallery/');
-    const list = await listAll(listRef);
+    const listRef = window._dbSRef(window._storage, 'gallery/');
+    const list = await window._listAll(listRef);
     if(!list.items.length) {
       grid.innerHTML = '<div class="egg-empty">No photos or videos yet.<br>Tap below to add your first one. 🤍</div>';
       return;
@@ -1308,7 +1520,7 @@ async function loadGallery() {
     const items = [...list.items].sort((a,b) => b.name.localeCompare(a.name));
     grid.innerHTML = '';
     await Promise.all(items.map(async item => {
-      const url = await getDownloadURL(item);
+      const url = await window._getDownloadURL(item);
       const isVideo = item.name.match(/\.(mp4|mov|avi|webm|mkv)$/i);
       const div = document.createElement('div');
       div.className = 'egg-item';
@@ -1340,8 +1552,8 @@ window.uploadFiles = async function(files) {
   for(const file of files) {
     const ext = file.name.split('.').pop();
     const name = `gallery/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const fileRef = sRef(storage, name);
-    await uploadBytes(fileRef, file);
+    const fileRef = window._dbSRef(window._storage, name);
+    await window._uploadBytes(fileRef, file);
     done++;
     uploading.textContent = `Uploading ${done} of ${files.length}...`;
   }
@@ -1365,7 +1577,7 @@ window.closeConfirm = function() {
 document.getElementById('eggDeleteBtn').addEventListener('click', async () => {
   if(!pendingDeletePath) return;
   try {
-    await deleteObject(sRef(storage, pendingDeletePath));
+    await window._dbDeleteObject(window._dbSRef(window._storage, pendingDeletePath));
     closeConfirm();
     await loadGallery();
     await loadStorageInfo();

@@ -56,11 +56,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-m);font-size:
 .sync-label{font-size:10px;color:var(--muted);letter-spacing:0.05em;}
 
 /* ── PROFILE TABS ── */
-.profile-bar{display:flex;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;}
-.profile-tab{flex:1;padding:10px;text-align:center;font-size:12px;letter-spacing:0.05em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-family:var(--font-m);}
-.profile-tab.active-ilian{color:var(--ilian);border-bottom-color:var(--ilian);}
-.profile-tab.active-lola{color:var(--lola);border-bottom-color:var(--lola);}
-.profile-tab.shared-tab.active{color:var(--accent2);border-bottom-color:var(--accent2);}
 
 /* ── CONTENT AREA ── */
 .content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 1rem);}
@@ -177,8 +172,7 @@ canvas{width:100%!important;}
   .app{flex-direction:row;}
   .sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);height:100vh;overflow-y:auto;}
   .bottom-nav{display:none;}
-  .profile-bar{display:none;}
-  .header{border-bottom:1px solid var(--border);}
+    .header{border-bottom:1px solid var(--border);}
   .main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
   .content{padding-bottom:1rem;}
   .sidebar-logo{padding:1.5rem 1.25rem 1rem;border-bottom:1px solid var(--border);}
@@ -247,9 +241,11 @@ canvas{width:100%!important;}
       <h1>Ilian <em>&</em> Lola</h1>
       <p>Financial Planner · CAD</p>
     </div>
-    <div class="sidebar-profile" id="sidebarProfile">
-      <button class="sp-btn sp-ilian" id="sp-ilian" onclick="switchProfile('ilian')">Ilian</button>
-      <button class="sp-btn inactive" id="sp-lola" onclick="switchProfile('lola')">Lola</button>
+
+    <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+      <div id="sidebarDot" style="width:8px;height:8px;border-radius:50%;background:var(--ilian);flex-shrink:0;"></div>
+      <span id="sidebarName" style="font-size:12px;color:var(--text);font-family:var(--font-m);flex:1;">Ilian</span>
+      <button onclick="forgetProfile()" style="background:transparent;border:none;font-size:10px;color:var(--muted);cursor:pointer;font-family:var(--font-m);letter-spacing:0.04em;padding:2px 0;">switch ↩</button>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-nav-item active" onclick="switchPanel('budget')">
@@ -297,17 +293,15 @@ canvas{width:100%!important;}
     <header class="header">
       <div class="header-logo">Ilian <em>&</em> Lola</div>
       <div class="header-right">
-        <span class="sync-label" id="activeProfileLabel" style="font-size:11px;color:var(--muted);margin-right:6px;">Ilian</span>
         <div class="sync-dot" id="syncDot"></div>
-        <span class="sync-label" id="syncLabel">Connecting...</span>
+        <span class="sync-label" id="syncLabel" style="margin-right:10px;">Connecting...</span>
+        <button id="profilePill" onclick="forgetProfile()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:5px 12px 5px 8px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:all 0.15s;font-family:var(--font-m);">
+          <div id="pillDot" style="width:8px;height:8px;border-radius:50%;background:var(--ilian);flex-shrink:0;"></div>
+          <span id="pillName" style="font-size:12px;color:var(--text);letter-spacing:0.04em;">Ilian</span>
+          <span style="font-size:10px;color:var(--muted);">↩</span>
+        </button>
       </div>
     </header>
-
-    <!-- PROFILE BAR -->
-    <div class="profile-bar">
-      <div class="profile-tab active-ilian" id="pt-ilian" onclick="switchProfile('ilian')">Ilian</div>
-      <div class="profile-tab" id="pt-lola" onclick="switchProfile('lola')">Lola</div>
-      
     </div>
 
     <!-- CONTENT -->
@@ -810,15 +804,16 @@ window.closeMore = function(){document.getElementById('moreMenu').style.display=
 window.switchProfile = function(prof) {
   syncInputsToState();
   currentProfile = prof;
-  document.getElementById('pt-ilian').className='profile-tab'+(prof==='ilian'?' active-ilian':'');
-  document.getElementById('pt-lola').className='profile-tab'+(prof==='lola'?' active-lola':'');
-  // sidebar profile buttons
+
+  // update profile pill in header
+  const pillName=document.getElementById('pillName');
+  const pillDot=document.getElementById('pillDot');
+  if(pillName) pillName.textContent=prof.charAt(0).toUpperCase()+prof.slice(1);
+  if(pillDot) pillDot.style.background=prof==='ilian'?'var(--ilian)':'var(--lola)';
+  // update sidebar profile buttons if present
   const spI=document.getElementById('sp-ilian');const spL=document.getElementById('sp-lola');
   if(spI)spI.className='sp-btn'+(prof==='ilian'?' sp-ilian':' inactive');
   if(spL)spL.className='sp-btn'+(prof==='lola'?' sp-lola':' inactive');
-  // header label
-  const apl=document.getElementById('activeProfileLabel');
-  if(apl){apl.textContent=prof.charAt(0).toUpperCase()+prof.slice(1);apl.style.color=prof==='ilian'?'var(--ilian)':'var(--lola)';}
 
 
   loadInputs(); renderAll();

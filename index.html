@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0c0c0b">
+<title>Ilian & Lola — Financial Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0c0b; --surface: #161614; --surface2: #1e1e1b; --surface3: #262623;
+  --border: #2a2a27; --border2: #3a3a36;
+  --text: #e8e5dc; --muted: #6a6860; --muted2: #4a4845;
+  --accent: #d4f050; --accent2: #50d4f0; --accent3: #f0a050;
+  --red: #f05050; --green: #50f0a0; --pink: #f050b0;
+  --ilian: #d4f050; --lola: #f050b0;
+  --font-d: 'Playfair Display', serif;
+  --font-m: 'DM Mono', monospace;
+  --nav-h: 64px; --header-h: 56px;
+  --radius: 10px; --radius-sm: 6px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-m);font-size:14px;line-height:1.5;}
+
+/* ── SYNC STATUS BAR ── */
+#syncBar{position:fixed;top:0;left:0;right:0;height:3px;z-index:999;background:transparent;transition:background 0.3s;}
+#syncBar.syncing{background:var(--accent3);}
+#syncBar.synced{background:var(--accent);}
+#syncBar.error{background:var(--red);}
+
+/* ── APP SHELL ── */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+
+/* ── HEADER ── */
+.header{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1rem;flex-shrink:0;padding-top:3px;}
+.header-logo{font-family:var(--font-d);font-size:1.1rem;font-weight:400;}
+.header-logo em{color:var(--accent);font-style:italic;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);flex-shrink:0;transition:background 0.3s;}
+.sync-dot.live{background:var(--accent);box-shadow:0 0 6px var(--accent);}
+.sync-dot.error{background:var(--red);}
+.sync-label{font-size:10px;color:var(--muted);letter-spacing:0.05em;}
+
+/* ── PROFILE TABS ── */
+.profile-bar{display:flex;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.profile-tab{flex:1;padding:10px;text-align:center;font-size:12px;letter-spacing:0.05em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-family:var(--font-m);}
+.profile-tab.active-ilian{color:var(--ilian);border-bottom-color:var(--ilian);}
+.profile-tab.active-lola{color:var(--lola);border-bottom-color:var(--lola);}
+.profile-tab.shared-tab.active{color:var(--accent2);border-bottom-color:var(--accent2);}
+
+/* ── CONTENT AREA ── */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 1rem);}
+.panel{display:none;padding:1rem;}
+.panel.active{display:block;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{height:calc(var(--nav-h) + var(--safe-bottom));padding-bottom:var(--safe-bottom);background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:flex-start;flex-shrink:0;position:relative;z-index:10;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 6px;cursor:pointer;color:var(--muted);transition:color 0.15s;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;gap:4px;font-family:var(--font-m);background:none;border:none;}
+.nav-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+.nav-btn.active{color:var(--accent);}
+.nav-btn.active svg{stroke:var(--accent);}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:0.75rem;}
+.card-sm{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.875rem;}
+.card-title{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.card-val{font-family:var(--font-d);font-size:1.6rem;font-weight:700;line-height:1.1;}
+.card-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.section-title{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin:1.25rem 0 0.75rem;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.section-title:first-child{margin-top:0;}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;}
+
+/* ── INPUTS ── */
+label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;}
+input[type=number],input[type=text],input[type=date],textarea,select{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:var(--font-m);font-size:14px;padding:10px 12px;outline:none;
+  transition:border-color 0.2s;-webkit-appearance:none;appearance:none;
+}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:70px;}
+.input-group{margin-bottom:0.75rem;}
+
+/* ── ROWS ── */
+.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.row:last-child{border-bottom:none;}
+.row .lbl{color:var(--muted);}
+.row .val{font-weight:500;}
+
+/* ── COLORS ── */
+.cg{color:var(--green);} .cr{color:var(--red);} .ca{color:var(--accent3);} .cy{color:var(--accent);} .cb{color:var(--accent2);} .cp{color:var(--pink);}
+
+/* ── BADGES ── */
+.badge{font-size:10px;padding:2px 8px;border-radius:3px;font-weight:500;}
+.b-r{background:#3a1010;color:var(--red);} .b-a{background:#3a2a10;color:var(--accent3);}
+.b-b{background:#102a3a;color:var(--accent2);} .b-g{background:#103a20;color:var(--green);}
+
+/* ── BUTTONS ── */
+.btn{background:transparent;border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--muted);font-family:var(--font-m);font-size:12px;padding:10px 16px;cursor:pointer;transition:all 0.15s;width:100%;}
+.btn:hover,.btn:active{border-color:var(--accent);color:var(--accent);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:500;}
+.btn-primary:hover,.btn-primary:active{background:#bcda30;border-color:#bcda30;color:var(--bg);}
+.add-btn{background:transparent;border:1px dashed var(--border2);border-radius:var(--radius-sm);color:var(--muted);font-family:var(--font-m);font-size:12px;padding:10px;width:100%;cursor:pointer;transition:all 0.2s;margin-top:8px;display:block;}
+.add-btn:active{border-color:var(--accent);color:var(--accent);}
+.rm-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 8px;line-height:1;flex-shrink:0;}
+.rm-btn:active{color:var(--red);}
+
+/* ── ALERTS ── */
+.alert{border-radius:var(--radius-sm);padding:0.875rem 1rem;margin-bottom:0.75rem;font-size:12px;line-height:1.6;}
+.a-warn{background:#2e1a0a;border:1px solid #6a3a10;color:#f0c080;}
+.a-info{background:#0a1e2e;border:1px solid #105a6a;color:#80c0f0;}
+.a-ok{background:#0a2e18;border:1px solid #106a30;color:#80f0b0;}
+.a-err{background:#2e0a0a;border:1px solid #6a1010;color:#f08080;}
+
+/* ── PROGRESS ── */
+.prog-wrap{background:var(--border);border-radius:2px;height:5px;width:100%;margin-top:8px;overflow:hidden;}
+.prog-bar{height:5px;border-radius:2px;transition:width 0.5s ease;}
+
+/* ── CHART ── */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:0.75rem;}
+.chart-title{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.875rem;}
+canvas{width:100%!important;}
+
+/* ── DEBT ITEM ── */
+.debt-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.875rem;margin-bottom:8px;}
+
+/* ── TIMELINE ── */
+.tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+.tl-item:last-child{border-bottom:none;}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.tl-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ── CHECKIN ── */
+.ci-entry{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.875rem;margin-bottom:8px;}
+.ci-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+
+/* ── NET WORTH ITEM ── */
+.nw-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+
+/* ── SHARED ── */
+.person-card{border-radius:var(--radius);padding:1rem;margin-bottom:0.75rem;}
+.person-ilian{background:#1a1e0a;border:1px solid #3a4a10;}
+.person-lola{background:#1e0a1a;border:1px solid #4a103a;}
+
+/* ── MODAL / TOAST ── */
+.toast{position:fixed;bottom:calc(var(--nav-h) + var(--safe-bottom) + 12px);left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:8px 18px;font-size:12px;color:var(--text);opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── LOADING ── */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;}
+.loading-logo{font-family:var(--font-d);font-size:1.5rem;color:var(--text);}
+.loading-logo em{color:var(--accent);font-style:italic;}
+.spinner{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-status{font-size:11px;color:var(--muted);}
+
+/* ── DESKTOP LAYOUT ── */
+@media(min-width:768px){
+  .app{flex-direction:row;}
+  .sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);height:100vh;overflow-y:auto;}
+  .bottom-nav{display:none;}
+  .main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .header{border-bottom:1px solid var(--border);}
+  .content{padding-bottom:1rem;}
+  .sidebar-logo{padding:1.5rem 1.25rem 1rem;border-bottom:1px solid var(--border);}
+  .sidebar-logo h1{font-family:var(--font-d);font-size:1.1rem;font-weight:400;}
+  .sidebar-logo h1 em{color:var(--accent);font-style:italic;}
+  .sidebar-logo p{font-size:10px;color:var(--muted);margin-top:2px;}
+  .sidebar-nav{flex:1;padding:0.5rem 0;}
+  .sidebar-nav-item{display:flex;align-items:center;gap:10px;padding:10px 1.25rem;cursor:pointer;color:var(--muted);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;transition:all 0.15s;border-left:2px solid transparent;font-family:var(--font-m);}
+  .sidebar-nav-item:hover{color:var(--text);background:var(--surface2);}
+  .sidebar-nav-item.active{color:var(--accent);border-left-color:var(--accent);background:var(--surface2);}
+  .sidebar-nav-item svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;flex-shrink:0;}
+  .sidebar-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);}
+  .panel{max-width:900px;padding:1.5rem;}
+  .g2{gap:1rem;} .g3{gap:0.75rem;} .g4{gap:0.75rem;}
+}
+@media(max-width:767px){
+  .sidebar{display:none;}
+  .main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;width:100%;}
+  .g3{grid-template-columns:1fr 1fr;}
+  .g4{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:380px){
+  .g2,.g3,.g4{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div id="syncBar"></div>
+<div class="toast" id="toast"></div>
+
+<!-- LOADING SCREEN -->
+<div class="app" id="loadingScreen">
+  <div class="loading">
+    <div class="loading-logo">Ilian <em>&</em> Lola</div>
+    <div class="spinner"></div>
+    <div class="loading-status" id="loadingStatus">Connecting to Firebase...</div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until loaded) -->
+<div class="app" id="mainApp" style="display:none;">
+
+  <!-- DESKTOP SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Ilian <em>&</em> Lola</h1>
+      <p>Financial Planner · CAD</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-nav-item active" onclick="switchPanel('budget')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Budget
+      </div>
+      <div class="sidebar-nav-item" onclick="switchPanel('debts')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Debt Plan
+      </div>
+      <div class="sidebar-nav-item" onclick="switchPanel('goals')">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Goals
+      </div>
+      <div class="sidebar-nav-item" onclick="switchPanel('invest')">
+        <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>Investing
+      </div>
+      <div class="sidebar-nav-item" onclick="switchPanel('shared')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Shared
+      </div>
+      <div class="sidebar-nav-item" onclick="switchPanel('networth')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>Net Worth
+      </div>
+      <div class="sidebar-nav-item" onclick="switchPanel('tax')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Tax / TD1
+      </div>
+      <div class="sidebar-nav-item" onclick="switchPanel('checkin')">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Check-In
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <div class="sync-dot" id="sdDot"></div>
+        <span class="sync-label" id="sdLabel">Connecting...</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn" style="font-size:10px;padding:6px 10px;" onclick="exportPDF()">PDF</button>
+        <button class="btn" style="font-size:10px;padding:6px 10px;" onclick="exportJSON()">Backup</button>
+        <button class="btn" style="font-size:10px;padding:6px 10px;" onclick="document.getElementById('importFile').click()">Restore</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <header class="header">
+      <div class="header-logo">Ilian <em>&</em> Lola</div>
+      <div class="header-right">
+        <div class="sync-dot" id="syncDot"></div>
+        <span class="sync-label" id="syncLabel">Connecting...</span>
+      </div>
+    </header>
+
+    <!-- PROFILE BAR -->
+    <div class="profile-bar">
+      <div class="profile-tab active-ilian" id="pt-ilian" onclick="switchProfile('ilian')">Ilian</div>
+      <div class="profile-tab" id="pt-lola" onclick="switchProfile('lola')">Lola</div>
+      <div class="profile-tab shared-tab" id="pt-shared" onclick="switchProfile('shared')">Shared</div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- BUDGET -->
+      <div id="panel-budget" class="panel active">
+        <div class="section-title">Income</div>
+        <div class="card">
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Job 1 net / month</label><input type="number" id="job1" inputmode="decimal" oninput="pushProfile()"></div>
+            <div class="input-group"><label>Job 2 net / month</label><input type="number" id="job2" inputmode="decimal" oninput="pushProfile()"></div>
+          </div>
+          <div class="input-group" style="margin-bottom:0;"><label>Other income / month</label><input type="number" id="otherIncome" inputmode="decimal" oninput="pushProfile()"></div>
+        </div>
+        <div class="section-title">Expenses</div>
+        <div class="card">
+          <div class="g3" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Rent</label><input type="number" id="rent" inputmode="decimal" oninput="pushProfile()"></div>
+            <div class="input-group"><label>Food</label><input type="number" id="food" inputmode="decimal" oninput="pushProfile()"></div>
+            <div class="input-group"><label>Internet</label><input type="number" id="internet" inputmode="decimal" oninput="pushProfile()"></div>
+          </div>
+          <div id="extraExpenses"></div>
+          <button class="add-btn" onclick="addExpense()">+ add expense</button>
+        </div>
+        <div class="section-title">Summary</div>
+        <div id="budgetSummary"></div>
+        <div id="budgetAlert"></div>
+        <div class="card"><div class="card-title">Cash flow</div><div id="cashFlow"></div></div>
+        <div class="chart-wrap"><div class="chart-title">Income vs outgoings</div><div style="position:relative;height:180px;"><canvas id="budgetChart"></canvas></div></div>
+
+        <div class="section-title">Savings</div>
+        <div class="card" style="margin-bottom:0.75rem;">
+          <div class="card-title">Emergency fund</div>
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Current savings (CAD)</label><input type="number" id="emergencySaved" inputmode="decimal" oninput="pushProfile()"></div>
+            <div class="input-group"><label>Monthly savings target (CAD)</label><input type="number" id="emergencyMonthly" inputmode="decimal" oninput="pushProfile()"></div>
+          </div>
+          <div class="input-group" style="margin-bottom:4px;"><label>Target (recommended: 3–6 months of expenses)</label><input type="number" id="emergencyTarget" inputmode="decimal" oninput="pushProfile()"></div>
+          <div id="emergencyResult" style="font-size:11px;color:var(--muted);margin-top:6px;"></div>
+          <div class="prog-wrap" style="margin-top:10px;"><div class="prog-bar" id="emergencyBar" style="width:0%;background:var(--accent);"></div></div>
+        </div>
+        <div class="card" style="margin-bottom:0.75rem;">
+          <div class="card-title">Leftover allocation</div>
+          <div id="allocationBreakdown"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">How you split your leftover each month between debt payoff, savings, and investing. Adjust your min payments, savings target, and investment amount across tabs to rebalance.</div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title">Savings growth projection</div>
+          <div style="position:relative;height:180px;"><canvas id="savingsChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- DEBTS -->
+      <div id="panel-debts" class="panel">
+        <div class="alert a-info">Avalanche method — extra cash attacks highest interest first.</div>
+        <div class="section-title">Your debts</div>
+        <div id="debtList"></div>
+        <button class="add-btn" onclick="addDebt()">+ add debt</button>
+        <div class="section-title">Payoff strategy</div>
+        <div id="debtStrategy"></div>
+        <div class="chart-wrap"><div class="chart-title">Balance over time</div><div style="position:relative;height:160px;"><canvas id="debtChart"></canvas></div></div>
+      </div>
+
+      <!-- GOALS -->
+      <div id="panel-goals" class="panel">
+        <div class="card">
+          <div class="card-title">🚗 Car fund</div>
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Target (CAD)</label><input type="number" id="carTarget" inputmode="decimal" oninput="pushProfile()"></div>
+            <div class="input-group"><label>Already saved</label><input type="number" id="carSaved" inputmode="decimal" oninput="pushProfile()"></div>
+          </div>
+          <div class="input-group" style="margin-bottom:4px;"><label>Monthly allocation</label><input type="number" id="carMonthly" inputmode="decimal" oninput="pushProfile()"></div>
+          <div id="carResult" style="font-size:11px;color:var(--muted);"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🏠 Move-in fund</div>
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Deposit needed</label><input type="number" id="moveTarget" inputmode="decimal" oninput="pushProfile()"></div>
+            <div class="input-group"><label>Already saved</label><input type="number" id="moveSaved" inputmode="decimal" oninput="pushProfile()"></div>
+          </div>
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Monthly allocation</label><input type="number" id="moveMonthly" inputmode="decimal" oninput="pushProfile()"></div>
+            <div class="input-group"><label>New rent after move</label><input type="number" id="newRent" inputmode="decimal" oninput="pushProfile()"></div>
+          </div>
+          <div class="input-group" style="margin-bottom:4px;"><label>New food budget</label><input type="number" id="newFood" inputmode="decimal" oninput="pushProfile()"></div>
+          <div id="moveResult" style="font-size:11px;color:var(--muted);"></div>
+        </div>
+        <div id="extraGoals"></div>
+        <button class="add-btn" onclick="addGoal()">+ add goal</button>
+        <div class="section-title">Timeline</div>
+        <div class="card"><div id="timeline"></div></div>
+        <div class="chart-wrap"><div class="chart-title">Savings accumulation</div><div style="position:relative;height:180px;"><canvas id="goalsChart"></canvas></div></div>
+      </div>
+
+      <!-- INVEST -->
+      <div id="panel-invest" class="panel">
+        <div class="alert a-info">Both on Wealthsimple — use TFSA first, then RRSP, then crypto account for speculative picks.</div>
+
+        <div class="section-title">Growth projector</div>
+        <div class="card">
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Monthly investment</label><input type="number" id="investMonthly" inputmode="decimal" oninput="pushProfile()"></div>
+            <div class="input-group"><label>Annual return (%)</label><input type="number" id="investReturn" value="7" step="0.5" inputmode="decimal" oninput="pushProfile()"></div>
+          </div>
+          <div class="g2">
+            <div class="input-group" style="margin-bottom:0;"><label>Years to project</label><input type="number" id="investYears" value="10" min="1" max="40" inputmode="numeric" oninput="pushProfile()"></div>
+            <div class="input-group" style="margin-bottom:0;"><label>Risk profile</label>
+              <select id="riskProfile" onchange="pushProfile();renderInvest()">
+                <option value="conservative">Conservative (5%)</option>
+                <option value="balanced" selected>Balanced (7%)</option>
+                <option value="growth">Growth (9%)</option>
+                <option value="aggressive">Aggressive (11%)</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="investSummary"></div>
+        <div class="chart-wrap"><div class="chart-title">Portfolio value vs contributions</div><div style="position:relative;height:220px;"><canvas id="investChart"></canvas></div></div>
+
+        <div class="section-title">Portfolio builder</div>
+        <div class="alert a-info" style="font-size:11px;">Add positions to track your allocation. Percentages show your target split. Total should add up to 100%.</div>
+        <div id="portfolioList"></div>
+        <button class="add-btn" onclick="addPosition()">+ add position</button>
+        <div id="portfolioSummary" style="margin-top:0.75rem;"></div>
+        <div class="chart-wrap" style="margin-top:0.75rem;"><div class="chart-title">Allocation breakdown</div><div style="position:relative;height:220px;"><canvas id="allocationChart"></canvas></div></div>
+
+        <div class="section-title">Wealthsimple account guide</div>
+        <div class="card" style="margin-bottom:0.75rem;">
+          <div class="row"><span class="lbl" style="font-weight:500;color:var(--text);">TFSA</span><span class="val cy">$7,000/yr · use first</span></div>
+          <div style="font-size:11px;color:var(--muted);padding:6px 0 8px;line-height:1.6;border-bottom:1px solid var(--border);">All growth and withdrawals are completely tax-free. On Wealthsimple this is your default account. Max this out before anything else — even if you only invest $583/month you're maxing the annual limit. Best for: ETFs, stocks you plan to hold long-term.</div>
+          <div class="row"><span class="lbl" style="font-weight:500;color:var(--text);">RRSP</span><span class="val cb">18% of income · cuts your tax bill</span></div>
+          <div style="font-size:11px;color:var(--muted);padding:6px 0 8px;line-height:1.6;border-bottom:1px solid var(--border);">Contributions are deducted from your taxable income — meaning if you earn $71,500 and put $5,000 in RRSP, you're taxed as if you earned $66,500. Especially powerful for you since you're in a higher bracket from two jobs. Withdrawals are taxed (ideally in retirement when your income is lower). Best for: long-term retirement savings.</div>
+          <div class="row"><span class="lbl" style="font-weight:500;color:var(--text);">Crypto account</span><span class="val" style="color:var(--accent3);">Speculative · keep under 5–10%</span></div>
+          <div style="font-size:11px;color:var(--muted);padding:6px 0 0;line-height:1.6;">Wealthsimple has a separate crypto account for BTC, ETH, SOL, etc. Gains are taxable (50% inclusion rate in Canada). Keep this a small slice of your overall portfolio — it's high risk, high reward. Never put money here you can't afford to lose.</div>
+        </div>
+
+        <div class="section-title">Recommended picks for beginners</div>
+        <div id="stockTips"></div>
+
+        <div class="section-title">Investing tips for Wealthsimple users</div>
+        <div id="investTips"></div>
+      </div>
+
+      <!-- SHARED -->
+      <div id="panel-shared" class="panel">
+        <div class="alert a-info">Combines both profiles. Update Lola's income in her profile for accurate numbers.</div>
+        <div id="sharedSummary"></div>
+        <div class="section-title">Apartment split</div>
+        <div class="card">
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Total rent</label><input type="number" id="sharedRent" value="2000" inputmode="decimal" oninput="pushShared()"></div>
+            <div class="input-group"><label>Ilian's share (%)</label><input type="number" id="sharedRentPct" value="100" inputmode="decimal" oninput="pushShared()"></div>
+          </div>
+          <div class="g2">
+            <div class="input-group" style="margin-bottom:0;"><label>Shared food budget</label><input type="number" id="sharedFood" value="1300" inputmode="decimal" oninput="pushShared()"></div>
+            <div class="input-group" style="margin-bottom:0;"><label>Ilian's food share (%)</label><input type="number" id="sharedFoodPct" value="60" inputmode="decimal" oninput="pushShared()"></div>
+          </div>
+        </div>
+        <div id="extraShared"></div>
+        <button class="add-btn" onclick="addSharedExpense()">+ add shared expense</button>
+        <div class="section-title">Side by side</div>
+        <div id="sharedComparison"></div>
+        <div class="chart-wrap"><div class="chart-title">Income breakdown</div><div style="position:relative;height:180px;"><canvas id="sharedChart"></canvas></div></div>
+      </div>
+
+      <!-- NET WORTH -->
+      <div id="panel-networth" class="panel">
+        <div class="alert a-info">Net worth = assets − liabilities. Debts auto-included as liabilities.</div>
+        <div id="networthSummary"></div>
+        <div class="section-title">Assets</div>
+        <div id="assetList"></div>
+        <button class="add-btn" onclick="addAsset()">+ add asset</button>
+        <div class="section-title">Extra liabilities</div>
+        <div id="liabilityList"></div>
+        <button class="add-btn" onclick="addLiability()">+ add liability</button>
+        <div class="chart-wrap" style="margin-top:0.75rem;"><div class="chart-title">Assets vs liabilities</div><div style="position:relative;height:180px;"><canvas id="networthChart"></canvas></div></div>
+      </div>
+
+      <!-- TAX -->
+      <div id="panel-tax" class="panel">
+        <div class="alert a-warn">⚠ Two T4 jobs = each employer withholds independently. You may owe more at filing.</div>
+        <div class="card">
+          <div class="input-group"><label>Job 1 annual gross</label><input type="number" id="taxJob1" inputmode="decimal" oninput="pushProfile();renderTax()"></div>
+          <div class="input-group"><label>Job 2 annual gross</label><input type="number" id="taxJob2" inputmode="decimal" oninput="pushProfile();renderTax()"></div>
+          <div class="input-group"><label>RRSP contributions this year</label><input type="number" id="taxRRSP" value="0" inputmode="decimal" oninput="pushProfile();renderTax()"></div>
+          <div class="input-group" style="margin-bottom:0;"><label>Other deductions</label><input type="number" id="taxOther" value="0" inputmode="decimal" oninput="pushProfile();renderTax()"></div>
+        </div>
+        <div class="section-title">Tax breakdown (2025 · BC)</div>
+        <div id="taxResult"></div>
+        <div class="section-title">TD1 recommendation</div>
+        <div class="card"><div id="td1Advice"></div></div>
+      </div>
+
+      <!-- CHECK-IN -->
+      <div id="panel-checkin" class="panel">
+        <div class="card">
+          <div class="card-title">New check-in</div>
+          <div class="input-group"><label>Date</label><input type="date" id="ciDate"></div>
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Actual income</label><input type="number" id="ciIncome" inputmode="decimal"></div>
+            <div class="input-group"><label>Actual expenses</label><input type="number" id="ciExpenses" inputmode="decimal"></div>
+          </div>
+          <div class="g2" style="margin-bottom:0.75rem;">
+            <div class="input-group"><label>Debt paid</label><input type="number" id="ciDebt" inputmode="decimal"></div>
+            <div class="input-group"><label>Savings added</label><input type="number" id="ciSavings" inputmode="decimal"></div>
+          </div>
+          <div class="input-group"><label>Notes</label><textarea id="ciNotes" placeholder="How did this month go?"></textarea></div>
+          <button class="btn btn-primary" onclick="addCheckin()">Save check-in</button>
+        </div>
+        <div class="section-title">History</div>
+        <div id="checkinList"></div>
+        <div class="chart-wrap"><div class="chart-title">Income vs expenses over time</div><div style="position:relative;height:160px;"><canvas id="checkinChart"></canvas></div></div>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- BOTTOM NAV (mobile) -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" onclick="switchPanel('budget')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Budget
+      </button>
+      <button class="nav-btn" onclick="switchPanel('debts')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Debts
+      </button>
+      <button class="nav-btn" onclick="switchPanel('goals')">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Goals
+      </button>
+      <button class="nav-btn" onclick="switchPanel('shared')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Shared
+      </button>
+      <button class="nav-btn" onclick="switchPanel('more')">
+        <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>More
+      </button>
+    </nav>
+  </div><!-- /main-area -->
+</div><!-- /mainApp -->
+
+<!-- MORE MENU (mobile) -->
+<div id="moreMenu" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.7);" onclick="closeMore()">
+  <div style="position:absolute;bottom:calc(var(--nav-h) + var(--safe-bottom));left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:0.5rem;" onclick="event.stopPropagation()">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;padding:0.75rem;">
+      <button class="btn" onclick="switchPanel('invest');closeMore()">📈 Investing</button>
+      <button class="btn" onclick="switchPanel('networth');closeMore()">💰 Net Worth</button>
+      <button class="btn" onclick="switchPanel('tax');closeMore()">🧾 Tax / TD1</button>
+      <button class="btn" onclick="switchPanel('checkin');closeMore()">📝 Check-In</button>
+      <button class="btn" onclick="exportPDF();closeMore()">📄 Export PDF</button>
+      <button class="btn" onclick="exportJSON();closeMore()">💾 Backup</button>
+    </div>
+    <div style="padding:0 0.75rem 0.75rem;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
+        <div class="sync-dot" id="moreSyncDot"></div>
+        <span class="sync-label" id="moreSyncLabel">Connecting...</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB5CX_m9Yy9XYOpQZwjQ1ZsRFAmTgn4YmE",
+  authDomain: "ilian-lola-planner.firebaseapp.com",
+  databaseURL: "https://ilian-lola-planner-default-rtdb.firebaseio.com",
+  projectId: "ilian-lola-planner",
+  storageBucket: "ilian-lola-planner.firebasestorage.app",
+  messagingSenderId: "467329533836",
+  appId: "1:467329533836:web:7a3a35b68d8c280a6ab8a9"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── DEFAULT DATA ──────────────────────────────────────────────────────────────
+const DEFAULT = {
+  ilian: {
+    job1:2590,job2:2800,otherIncome:0,rent:1000,food:900,internet:45,
+    extraExpenses:[],
+    debts:[
+      {name:'Debt A',balance:194,payment:37,rate:32},
+      {name:'Debt B',balance:1053,payment:104,rate:16},
+      {name:'Credit card',balance:1000,payment:25,rate:19.99},
+      {name:'Debt C',balance:590,payment:60,rate:0},
+    ],
+    carTarget:3000,carSaved:0,carMonthly:800,
+    moveTarget:4000,moveSaved:0,moveMonthly:1000,newRent:2000,newFood:1200,
+    extraGoals:[],investMonthly:800,investReturn:7,investYears:10,riskProfile:'balanced',
+    portfolio:[
+      {name:'XEQT',type:'etf',alloc:50,account:'TFSA'},
+      {name:'VFV',type:'etf',alloc:30,account:'TFSA'},
+      {name:'BTC',type:'crypto',alloc:10,account:'Crypto'},
+      {name:'SHOP.TO',type:'stock',alloc:10,account:'TFSA'},
+    ],
+    emergencySaved:0,emergencyTarget:6000,emergencyMonthly:300,
+    assets:[{name:'Savings account',value:0}],liabilities:[],
+    taxJob1:37700,taxJob2:33600,taxRRSP:0,taxOther:0,checkins:[],
+  },
+  lola: {
+    job1:0,job2:0,otherIncome:0,rent:0,food:900,internet:45,
+    extraExpenses:[],debts:[],
+    carTarget:0,carSaved:0,carMonthly:0,
+    moveTarget:0,moveSaved:0,moveMonthly:0,newRent:2000,newFood:600,
+    extraGoals:[],investMonthly:0,investReturn:7,investYears:10,riskProfile:'balanced',
+    portfolio:[],
+    emergencySaved:0,emergencyTarget:3000,emergencyMonthly:0,
+    assets:[],liabilities:[],taxJob1:0,taxJob2:0,taxRRSP:0,taxOther:0,checkins:[],
+  },
+  shared:{rent:2000,rentPct:100,food:1300,foodPct:60,extras:[]},
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let state = JSON.parse(JSON.stringify(DEFAULT));
+let currentProfile = 'ilian';
+let currentPanel = 'budget';
+let charts = {};
+let pushTimeout = null;
+let isRemoteUpdate = false;
+
+const p = () => state[currentProfile] || state.ilian;
+const fmt = n => '$' + Math.round(Math.abs(n)).toLocaleString('en-CA');
+const mo2date = m => { const d=new Date(2026,2); d.setMonth(d.getMonth()+m); return d.toLocaleDateString('en-CA',{month:'short',year:'numeric'}); };
+
+// ── SYNC STATUS ───────────────────────────────────────────────────────────────
+function setSyncStatus(status) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  const sdDot = document.getElementById('sdDot');
+  const sdLbl = document.getElementById('sdLabel');
+  const mdDot = document.getElementById('moreSyncDot');
+  const mdLbl = document.getElementById('moreSyncLabel');
+  const bar = document.getElementById('syncBar');
+  const dots = [dot,sdDot,mdDot].filter(Boolean);
+  const lbls = [lbl,sdLbl,mdLbl].filter(Boolean);
+  if(status==='live'){
+    dots.forEach(d=>{d.className='sync-dot live';});
+    lbls.forEach(l=>{l.textContent='Live sync';});
+    bar.className=''; bar.className=''; setTimeout(()=>bar.className='synced',10); setTimeout(()=>{bar.style.opacity='0';setTimeout(()=>{bar.className='';bar.style.opacity='';},500);},1500);
+  } else if(status==='syncing'){
+    dots.forEach(d=>{d.className='sync-dot';});
+    lbls.forEach(l=>{l.textContent='Syncing...';});
+    bar.className='syncing';
+  } else {
+    dots.forEach(d=>{d.className='sync-dot error';});
+    lbls.forEach(l=>{l.textContent='Offline';});
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+const dbRef = ref(db, 'planner');
+
+onValue(dbRef, (snapshot) => {
+  const remote = snapshot.val();
+  if(remote) {
+    isRemoteUpdate = true;
+    // deep merge to preserve any local-only keys
+    state.ilian = {...DEFAULT.ilian,...(remote.ilian||{})};
+    state.lola = {...DEFAULT.lola,...(remote.lola||{})};
+    state.shared = {...DEFAULT.shared,...(remote.shared||{})};
+    loadInputs();
+    renderAll();
+    setSyncStatus('live');
+    isRemoteUpdate = false;
+  }
+  // Show app after first load
+  if(document.getElementById('loadingScreen').style.display!=='none'){
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('mainApp').style.display='flex';
+    if(!remote) { set(dbRef, state); } // first time — seed DB
+  }
+}, (error) => {
+  setSyncStatus('error');
+  document.getElementById('loadingStatus').textContent = 'Connection failed. Check Firebase setup.';
+  // Show app anyway with defaults
+  setTimeout(()=>{
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('mainApp').style.display='flex';
+  },2000);
+});
+
+function pushProfile() {
+  if(isRemoteUpdate) return;
+  syncInputsToState();
+  setSyncStatus('syncing');
+  clearTimeout(pushTimeout);
+  pushTimeout = setTimeout(()=>{
+    update(ref(db,'planner'),{[currentProfile]:state[currentProfile]})
+      .then(()=>{ setSyncStatus('live'); showToast('Saved ✓'); renderAll(); })
+      .catch(()=>setSyncStatus('error'));
+  }, 600);
+}
+
+function pushShared() {
+  if(isRemoteUpdate) return;
+  syncSharedInputs();
+  setSyncStatus('syncing');
+  clearTimeout(pushTimeout);
+  pushTimeout = setTimeout(()=>{
+    update(ref(db,'planner'),{shared:state.shared})
+      .then(()=>{ setSyncStatus('live'); renderShared(); })
+      .catch(()=>setSyncStatus('error'));
+  }, 600);
+}
+
+window.pushProfile = pushProfile;
+window.pushShared = pushShared;
+
+// ── SYNC INPUTS ───────────────────────────────────────────────────────────────
+function syncInputsToState() {
+  const fields = ['job1','job2','otherIncome','rent','food','internet','carTarget','carSaved','carMonthly','moveTarget','moveSaved','moveMonthly','newRent','newFood','investMonthly','investReturn','investYears','taxJob1','taxJob2','taxRRSP','taxOther','emergencySaved','emergencyTarget','emergencyMonthly'];
+  fields.forEach(f=>{ const el=document.getElementById(f); if(el) p()[f]=parseFloat(el.value)||0; });
+  const rp=document.getElementById('riskProfile');if(rp)p().riskProfile=rp.value;
+  p().extraExpenses.forEach((e,i)=>{ const el=document.getElementById('ee_amt_'+i); if(el)e.amount=parseFloat(el.value)||0; });
+}
+function syncSharedInputs() {
+  state.shared.rent = parseFloat(document.getElementById('sharedRent')?.value)||2000;
+  state.shared.rentPct = parseFloat(document.getElementById('sharedRentPct')?.value)||100;
+  state.shared.food = parseFloat(document.getElementById('sharedFood')?.value)||1300;
+  state.shared.foodPct = parseFloat(document.getElementById('sharedFoodPct')?.value)||60;
+}
+
+function loadInputs() {
+  const fields = ['job1','job2','otherIncome','rent','food','internet','carTarget','carSaved','carMonthly','moveTarget','moveSaved','moveMonthly','newRent','newFood','investMonthly','investReturn','investYears','taxJob1','taxJob2','taxRRSP','taxOther','emergencySaved','emergencyTarget','emergencyMonthly'];
+  fields.forEach(f=>{ const el=document.getElementById(f); if(el&&p()[f]!==undefined) el.value=p()[f]; });
+  const rp=document.getElementById('riskProfile');if(rp&&p().riskProfile)rp.value=p().riskProfile;
+  document.getElementById('sharedRent').value=state.shared.rent||2000;
+  document.getElementById('sharedRentPct').value=state.shared.rentPct||100;
+  document.getElementById('sharedFood').value=state.shared.food||1300;
+  document.getElementById('sharedFoodPct').value=state.shared.foodPct||60;
+  document.getElementById('ciDate').value=new Date().toISOString().split('T')[0];
+  rebuildDynamic();
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+window.switchPanel = function(name) {
+  if(name==='more'){document.getElementById('moreMenu').style.display='flex';return;}
+  currentPanel=name;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const panel=document.getElementById('panel-'+name);
+  if(panel){panel.classList.add('active');panel.scrollTop=0;}
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{
+    const names=['budget','debts','goals','shared','more'];
+    b.classList.toggle('active',names[i]===name);
+  });
+  document.querySelectorAll('.sidebar-nav-item').forEach((b,i)=>{
+    const names=['budget','debts','goals','invest','shared','networth','tax','checkin'];
+    b.classList.toggle('active',names[i]===name);
+  });
+  setTimeout(()=>renderAll(),50);
+};
+window.closeMore = function(){document.getElementById('moreMenu').style.display='none';};
+
+window.switchProfile = function(prof) {
+  syncInputsToState();
+  currentProfile = prof==='shared'?'ilian':prof;
+  document.getElementById('pt-ilian').className='profile-tab'+(prof==='ilian'?' active-ilian':'');
+  document.getElementById('pt-lola').className='profile-tab'+(prof==='lola'?' active-lola':'');
+  document.getElementById('pt-shared').className='profile-tab shared-tab'+(prof==='shared'?' active':'');
+  if(prof==='shared'){
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('panel-shared').classList.add('active');
+    currentPanel='shared';
+  }
+  loadInputs(); renderAll();
+};
+
+// ── DYNAMIC LISTS ─────────────────────────────────────────────────────────────
+function rebuildDynamic() {
+  // extra expenses
+  const ee=document.getElementById('extraExpenses');
+  if(ee){ee.innerHTML='';p().extraExpenses.forEach((e,i)=>{const d=document.createElement('div');d.style.cssText='display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;';d.innerHTML=`<div style="flex:2"><label>${e.name}</label><input type="number" inputmode="decimal" id="ee_amt_${i}" value="${e.amount}" oninput="p().extraExpenses[${i}].amount=parseFloat(this.value)||0;pushProfile()"></div><button class="rm-btn" onclick="removeExpense(${i})">×</button>`;ee.appendChild(d);});}
+  // debts
+  const dl=document.getElementById('debtList');
+  if(dl){dl.innerHTML='';p().debts.forEach((d,i)=>{const div=document.createElement('div');div.className='debt-item';div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><input type="text" value="${d.name}" style="background:transparent;border:none;font-family:var(--font-m);font-size:14px;color:var(--text);font-weight:500;flex:1;" oninput="p().debts[${i}].name=this.value;pushProfile()"><button class="rm-btn" onclick="removeDebt(${i})">×</button></div><div class="g3"><div><label>Balance</label><input type="number" inputmode="decimal" value="${d.balance}" oninput="p().debts[${i}].balance=parseFloat(this.value)||0;pushProfile()"></div><div><label>Min pmt</label><input type="number" inputmode="decimal" value="${d.payment}" oninput="p().debts[${i}].payment=parseFloat(this.value)||0;pushProfile()"></div><div><label>Rate %</label><input type="number" inputmode="decimal" value="${d.rate}" step="0.01" oninput="p().debts[${i}].rate=parseFloat(this.value)||0;pushProfile()"></div></div>`;dl.appendChild(div);});}
+  // extra goals
+  const eg=document.getElementById('extraGoals');
+  if(eg){eg.innerHTML='';p().extraGoals.forEach((g,i)=>{const div=document.createElement('div');div.className='card';div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div class="card-title">${g.name}</div><button class="rm-btn" onclick="removeGoal(${i})">×</button></div><div class="g2"><div><label>Target</label><input type="number" inputmode="decimal" id="eg_t_${i}" value="${g.target}" oninput="p().extraGoals[${i}].target=parseFloat(this.value)||0;pushProfile()"></div><div><label>Monthly</label><input type="number" inputmode="decimal" id="eg_m_${i}" value="${g.monthly}" oninput="p().extraGoals[${i}].monthly=parseFloat(this.value)||0;pushProfile()"></div></div>`;eg.appendChild(div);});}
+  // assets/liabilities
+  rebuildNetworth();
+  // shared extras
+  rebuildSharedExtras();
+  // portfolio
+  rebuildPortfolio();
+}
+
+function rebuildNetworth(){
+  const al=document.getElementById('assetList');if(!al)return;al.innerHTML='';
+  p().assets.forEach((a,i)=>{const d=document.createElement('div');d.className='nw-item';d.innerHTML=`<input type="text" value="${a.name}" style="flex:1;background:transparent;border:none;font-family:var(--font-m);font-size:13px;color:var(--text);" oninput="p().assets[${i}].name=this.value;pushProfile()"><input type="number" inputmode="decimal" value="${a.value}" style="width:110px;" oninput="p().assets[${i}].value=parseFloat(this.value)||0;pushProfile();renderNetworth()"><button class="rm-btn" onclick="removeAsset(${i})">×</button>`;al.appendChild(d);});
+  const ll=document.getElementById('liabilityList');if(!ll)return;ll.innerHTML='';
+  p().liabilities.forEach((a,i)=>{const d=document.createElement('div');d.className='nw-item';d.innerHTML=`<input type="text" value="${a.name}" style="flex:1;background:transparent;border:none;font-family:var(--font-m);font-size:13px;color:var(--text);" oninput="p().liabilities[${i}].name=this.value;pushProfile()"><input type="number" inputmode="decimal" value="${a.value}" style="width:110px;" oninput="p().liabilities[${i}].value=parseFloat(this.value)||0;pushProfile();renderNetworth()"><button class="rm-btn" onclick="removeLiability(${i})">×</button>`;ll.appendChild(d);});
+}
+function rebuildSharedExtras(){
+  const es=document.getElementById('extraShared');if(!es)return;es.innerHTML='';
+  (state.shared.extras||[]).forEach((e,i)=>{const div=document.createElement('div');div.className='card';div.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:12px;font-weight:500;">${e.name}</span><button class="rm-btn" onclick="state.shared.extras.splice(${i},1);rebuildSharedExtras();pushShared()">×</button></div><div class="g2"><div><label>Total cost</label><input type="number" inputmode="decimal" value="${e.total}" oninput="state.shared.extras[${i}].total=parseFloat(this.value)||0;pushShared()"></div><div><label>Ilian's share %</label><input type="number" inputmode="decimal" value="${e.myPct}" oninput="state.shared.extras[${i}].myPct=parseFloat(this.value)||0;pushShared()"></div></div>`;es.appendChild(div);});
+}
+
+const TYPE_COLORS={'etf':'#d4f050','stock':'#50d4f0','crypto':'#f0a050','bond':'#50f0a0','cash':'#f050b0','other':'#a050f0'};
+const TYPE_RETURNS={'etf':7,'stock':10,'crypto':40,'bond':4,'cash':2,'other':7};
+
+function rebuildPortfolio(){
+  const pl=document.getElementById('portfolioList');if(!pl)return;pl.innerHTML='';
+  if(!p().portfolio)p().portfolio=[];
+  p().portfolio.forEach((pos,i)=>{
+    const div=document.createElement('div');div.className='debt-item';div.style.marginBottom='8px';
+    div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;">
+        <span style="width:10px;height:10px;border-radius:50%;background:${TYPE_COLORS[pos.type]||'#888'};flex-shrink:0;display:inline-block;"></span>
+        <input type="text" value="${pos.name}" style="background:transparent;border:none;font-family:var(--font-m);font-size:13px;color:var(--text);font-weight:500;width:90px;" oninput="p().portfolio[${i}].name=this.value;pushProfile()">
+      </div>
+      <button class="rm-btn" onclick="p().portfolio.splice(${i},1);rebuildPortfolio();pushProfile();renderInvest()">×</button>
+    </div>
+    <div class="g3">
+      <div><label>Type</label>
+        <select oninput="p().portfolio[${i}].type=this.value;pushProfile();rebuildPortfolio();renderInvest()">
+          ${['etf','stock','crypto','bond','cash','other'].map(t=>`<option value="${t}"${pos.type===t?' selected':''}>${t.toUpperCase()}</option>`).join('')}
+        </select>
+      </div>
+      <div><label>Allocation %</label><input type="number" inputmode="decimal" value="${pos.alloc}" min="0" max="100" oninput="p().portfolio[${i}].alloc=parseFloat(this.value)||0;pushProfile();renderInvest()"></div>
+      <div><label>Account</label>
+        <select oninput="p().portfolio[${i}].account=this.value;pushProfile()">
+          ${['TFSA','RRSP','Crypto','Non-reg'].map(a=>`<option value="${a}"${pos.account===a?' selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+    pl.appendChild(div);
+  });
+}
+
+// expose p() to onclick handlers
+window.p = p;
+window.state = state;
+window.pushProfile = pushProfile;
+window.pushShared = pushShared;
+window.rebuildSharedExtras = rebuildSharedExtras;
+window.rebuildPortfolio = rebuildPortfolio;
+window.addPosition=()=>{
+  if(!p().portfolio)p().portfolio=[];
+  p().portfolio.push({name:'XEQT',type:'etf',alloc:10,account:'TFSA'});
+  rebuildPortfolio();pushProfile();renderInvest();
+};
+
+window.addExpense=()=>{const n=prompt('Expense name:');if(!n)return;p().extraExpenses.push({name:n,amount:0});rebuildDynamic();pushProfile();};
+window.removeExpense=(i)=>{p().extraExpenses.splice(i,1);rebuildDynamic();pushProfile();};
+window.addDebt=()=>{p().debts.push({name:'New debt',balance:0,payment:0,rate:0});rebuildDynamic();pushProfile();};
+window.removeDebt=(i)=>{p().debts.splice(i,1);rebuildDynamic();pushProfile();};
+window.addGoal=()=>{const n=prompt('Goal name:');if(!n)return;p().extraGoals.push({name:n,target:1000,monthly:200});rebuildDynamic();pushProfile();};
+window.removeGoal=(i)=>{p().extraGoals.splice(i,1);rebuildDynamic();pushProfile();};
+window.addAsset=()=>{p().assets.push({name:'New asset',value:0});rebuildNetworth();pushProfile();};
+window.removeAsset=(i)=>{p().assets.splice(i,1);rebuildNetworth();pushProfile();renderNetworth();};
+window.addLiability=()=>{p().liabilities.push({name:'New liability',value:0});rebuildNetworth();pushProfile();};
+window.removeLiability=(i)=>{p().liabilities.splice(i,1);rebuildNetworth();pushProfile();renderNetworth();};
+window.addSharedExpense=()=>{const n=prompt('Shared expense name:');if(!n)return;if(!state.shared.extras)state.shared.extras=[];state.shared.extras.push({name:n,total:0,myPct:50});rebuildSharedExtras();pushShared();};
+
+// ── CHART HELPER ──────────────────────────────────────────────────────────────
+function mkChart(id,type,data,opts){
+  const ctx=document.getElementById(id);if(!ctx)return;
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(ctx,{type,data,options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...opts}});
+}
+const scaleOpts=(yFmt)=>({scales:{x:{ticks:{color:'#6a6860',font:{size:10},maxRotation:30},grid:{color:'#2a2a27'}},y:{ticks:{color:'#6a6860',callback:yFmt||((v)=>'$'+Math.abs(v).toLocaleString())},grid:{color:'#2a2a27'}}}});
+
+// ── AVALANCHE ─────────────────────────────────────────────────────────────────
+function avalanche(debts,extra){
+  let d=debts.map(x=>({...x,rem:x.balance}));let months=0,done=new Array(d.length).fill(null);
+  while(d.some(x=>x.rem>0.01)&&months<360){months++;d.forEach(x=>{if(x.rem>0)x.rem+=x.rem*(x.rate/100/12);});d.forEach(x=>{if(x.rem>0){const pay=Math.min(x.payment,x.rem);x.rem-=pay;}});let ex=extra;[...d.map((x,i)=>({...x,i}))].filter(x=>x.rem>0.01&&x.rate>0).sort((a,b)=>b.rate-a.rate).forEach(s=>{if(ex<=0)return;const pay=Math.min(ex,d[s.i].rem);d[s.i].rem-=pay;ex-=pay;});if(ex>0){const z=d.find(x=>x.rem>0.01&&x.rate===0);if(z)z.rem=Math.max(0,z.rem-ex);}d.forEach((x,i)=>{if(x.rem<=0.01&&done[i]===null)done[i]=months;});}return done;
+}
+
+// ── TAX CALC ──────────────────────────────────────────────────────────────────
+function calcTax(gross){
+  const fB=[[57375,0.15],[57375,0.205],[63895,0.26],[76422,0.29],[Infinity,0.33]];
+  let fed=0,r=gross;for(const[t,rt]of fB){const c=Math.min(r,t);fed+=c*rt;r-=c;if(r<=0)break;}fed=Math.max(0,fed-15705*0.15);
+  const bB=[[45654,0.0506],[45656,0.077],[15798,0.105],[19849,0.1229],[24847,0.147],[61098,0.168],[Infinity,0.205]];
+  let bc=0,r2=gross;for(const[t,rt]of bB){const c=Math.min(r2,t);bc+=c*rt;r2-=c;if(r2<=0)break;}bc=Math.max(0,bc-11981*0.0506);
+  const cpp=Math.min(Math.max(gross-3500,0),65000)*0.0595;const ei=Math.min(gross,63200)*0.0166;
+  return{fed,bc,cpp,ei,total:fed+bc+cpp+ei,net:gross-fed-bc-cpp-ei,rate:(fed+bc+cpp+ei)/gross*100};
+}
+
+// ── RENDER ALL ────────────────────────────────────────────────────────────────
+function renderAll(){
+  renderBudget(); renderSavings(); renderDebts(); renderGoals(); renderInvest();
+  renderShared(); renderNetworth(); renderTax(); renderCheckin();
+}
+
+function renderBudget(){
+  const income=(p().job1||0)+(p().job2||0)+(p().otherIncome||0);
+  let expenses=(p().rent||0)+(p().food||0)+(p().internet||0);
+  p().extraExpenses.forEach((e,i)=>{expenses+=parseFloat(document.getElementById('ee_amt_'+i)?.value)||e.amount||0;});
+  const debtMin=p().debts.reduce((s,d)=>s+d.payment,0);
+  const leftover=income-expenses-debtMin;
+
+  const bs=document.getElementById('budgetSummary');
+  if(bs)bs.innerHTML=`<div class="g4" style="margin-bottom:0.75rem;">
+    <div class="card-sm"><div class="card-title">Income</div><div class="card-val cg">${fmt(income)}</div></div>
+    <div class="card-sm"><div class="card-title">Expenses</div><div class="card-val cr">${fmt(expenses)}</div></div>
+    <div class="card-sm"><div class="card-title">Debt pmts</div><div class="card-val ca">${fmt(debtMin)}</div></div>
+    <div class="card-sm"><div class="card-title">Leftover</div><div class="card-val ${leftover>=0?'cy':'cr'}">${fmt(leftover)}</div></div>
+  </div>`;
+
+  const ba=document.getElementById('budgetAlert');
+  if(ba)ba.innerHTML=leftover<0?`<div class="alert a-err">⚠ Over budget by ${fmt(-leftover)}/mo.</div>`:leftover<300?`<div class="alert a-warn">Tight — ${fmt(leftover)} left each month.</div>`:`<div class="alert a-ok">✓ ${fmt(leftover)}/month free to allocate.</div>`;
+
+  const cf=document.getElementById('cashFlow');
+  if(cf){
+    let r=`<div class="row"><span class="lbl">Job 1</span><span class="val cg">+${fmt(p().job1)}</span></div>`;
+    if(p().job2)r+=`<div class="row"><span class="lbl">Job 2</span><span class="val cg">+${fmt(p().job2)}</span></div>`;
+    if(p().otherIncome)r+=`<div class="row"><span class="lbl">Other</span><span class="val cg">+${fmt(p().otherIncome)}</span></div>`;
+    r+=`<div class="row"><span class="lbl">Rent</span><span class="val cr">-${fmt(p().rent)}</span></div><div class="row"><span class="lbl">Food</span><span class="val cr">-${fmt(p().food)}</span></div><div class="row"><span class="lbl">Internet</span><span class="val cr">-${fmt(p().internet)}</span></div>`;
+    p().extraExpenses.forEach((e,i)=>{const a=parseFloat(document.getElementById('ee_amt_'+i)?.value)||e.amount||0;r+=`<div class="row"><span class="lbl">${e.name}</span><span class="val cr">-${fmt(a)}</span></div>`;});
+    p().debts.forEach(d=>{r+=`<div class="row"><span class="lbl">${d.name} (${d.rate}%)</span><span class="val ca">-${fmt(d.payment)}</span></div>`;});
+    r+=`<div class="row"><span class="lbl" style="color:var(--text);font-weight:500;">Leftover</span><span class="val ${leftover>=0?'cy':'cr'}" style="font-size:15px;">${fmt(leftover)}/mo</span></div>`;
+    cf.innerHTML=r;
+  }
+
+  const labels=['Rent','Food','Internet',...p().extraExpenses.map(e=>e.name),...p().debts.map(d=>d.name),'Left over'];
+  const vals=[p().rent,p().food,p().internet,...p().extraExpenses.map((e,i)=>parseFloat(document.getElementById('ee_amt_'+i)?.value)||e.amount||0),...p().debts.map(d=>d.payment),Math.max(0,leftover)];
+  const colors=[...[...Array(3+p().extraExpenses.length)].map(()=>'#f05050'),...p().debts.map(()=>'#f0a050'),'#d4f050'];
+  mkChart('budgetChart','bar',{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0,borderRadius:3}]},scaleOpts());
+}
+
+function renderDebts(){
+  const income=(p().job1||0)+(p().job2||0)+(p().otherIncome||0);
+  const expenses=(p().rent||0)+(p().food||0)+(p().internet||0);
+  const debtMin=p().debts.reduce((s,d)=>s+d.payment,0);
+  const leftover=Math.max(0,income-expenses-debtMin);
+  const payoff=avalanche(p().debts,leftover);
+  const debtFree=payoff.every(m=>m!==null)&&payoff.length?Math.max(...payoff):null;
+
+  const ds=document.getElementById('debtStrategy');
+  if(ds){
+    let html=debtFree?`<div class="alert a-ok">Debt-free by <b>${mo2date(debtFree)}</b> 🎉</div>`:`<div class="alert a-info">Add more leftover to accelerate payoff.</div>`;
+    [...p().debts.map((d,i)=>({...d,i,months:payoff[i]}))].sort((a,b)=>b.rate-a.rate).forEach((d,rank)=>{
+      const badge=rank===0&&d.rate>0?'<span class="badge b-r">attack first</span>':rank===1&&d.rate>0?'<span class="badge b-a">2nd</span>':d.rate===0?'<span class="badge b-g">0% · min only</span>':'<span class="badge b-b">attack later</span>';
+      const int=d.rate>0?`~${fmt(d.balance*d.rate/100/12)}/mo interest · `:'';
+      html+=`<div class="debt-item"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-weight:500;">${d.name}</span>${badge}</div><div style="font-size:12px;color:var(--muted);">${fmt(d.balance)} · ${d.rate}% · ${int}${d.months?'done '+mo2date(d.months):'min only'}</div><div class="prog-wrap"><div class="prog-bar" style="width:${Math.min(100,Math.round(d.balance/Math.max(...p().debts.map(x=>x.balance),1)*100))}%;background:${d.rate>=25?'#f05050':d.rate>=15?'#f0a050':d.rate>0?'#50d4f0':'#50f0a0'};"></div></div></div>`;
+    });
+    ds.innerHTML=html;
+  }
+
+  const maxMo=Math.max(...payoff.filter(m=>m!==null),12);
+  let bals=p().debts.map(d=>d.balance);const dData=[bals.reduce((s,b)=>s+b,0)];
+  for(let m=1;m<=maxMo;m++){bals=bals.map((b,i)=>{if(b<=0)return 0;b+=b*(p().debts[i].rate/100/12);return Math.max(0,b-p().debts[i].payment);});let ex=leftover;p().debts.map((d,i)=>({i,rate:d.rate})).filter((_,i)=>bals[i]>0&&p().debts[i].rate>0).sort((a,b)=>b.rate-a.rate).forEach(o=>{if(ex<=0)return;const pay=Math.min(ex,bals[o.i]);bals[o.i]-=pay;ex-=pay;bals[o.i]=Math.max(0,bals[o.i]);});dData.push(bals.reduce((s,b)=>s+b,0));}
+  mkChart('debtChart','line',{labels:Array.from({length:maxMo+1},(_,i)=>i===0?'Now':i%Math.max(1,Math.floor(maxMo/5))===0?`Mo ${i}`:''),datasets:[{data:dData,borderColor:'#f05050',backgroundColor:'rgba(240,80,80,0.1)',fill:true,tension:0.3,pointRadius:0,borderWidth:2}]},scaleOpts());
+}
+
+function renderGoals(){
+  const income=(p().job1||0)+(p().job2||0)+(p().otherIncome||0);
+  const expenses=(p().rent||0)+(p().food||0)+(p().internet||0);
+  const debtMin=p().debts.reduce((s,d)=>s+d.payment,0);
+
+  const carN=Math.max(0,(p().carTarget||0)-(p().carSaved||0));
+  const carMo=(p().carMonthly||0)>0?Math.ceil(carN/(p().carMonthly)):null;
+  const cr=document.getElementById('carResult');
+  if(cr)cr.innerHTML=carMo?`<span class="cy">~${carMo} months · ${mo2date(carMo)}</span>`:'Set a monthly allocation.';
+
+  const moveN=Math.max(0,(p().moveTarget||0)-(p().moveSaved||0));
+  const moveMo=(p().moveMonthly||0)>0?Math.ceil(moveN/(p().moveMonthly)):null;
+  const newExp=(p().newRent||0)+(p().newFood||0)+(p().internet||0);
+  const newLeft=income-newExp-debtMin;
+  const mr=document.getElementById('moveResult');
+  if(mr)mr.innerHTML=moveMo?`<span class="cb">~${moveMo} months</span> · After move: <span class="${newLeft>=0?'cg':'cr'}">${fmt(newLeft)}/mo</span>`:'Set a monthly allocation.';
+
+  const tl=document.getElementById('timeline');
+  if(tl){
+    const events=[];
+    if(carMo)events.push({month:carMo,label:'🚗 Car goal reached',color:'#d4f050'});
+    if(moveMo)events.push({month:moveMo,label:'🏠 Move-in fund ready',color:'#50d4f0'});
+    const payoff=avalanche(p().debts,Math.max(0,income-expenses-debtMin));
+    const df=payoff.every(m=>m!==null)&&payoff.length?Math.max(...payoff):null;
+    if(df)events.push({month:df,label:'🎉 Debt-free!',color:'#50f0a0'});
+    p().extraGoals.forEach((g,i)=>{const t=parseFloat(document.getElementById('eg_t_'+i)?.value)||g.target;const m=parseFloat(document.getElementById('eg_m_'+i)?.value)||g.monthly;if(m>0)events.push({month:Math.ceil(t/m),label:`★ ${g.name}`,color:'#f0a050'});});
+    events.sort((a,b)=>a.month-b.month);
+    tl.innerHTML=events.length?events.map(e=>`<div class="tl-item"><div class="tl-dot" style="background:${e.color}"></div><div><div style="font-size:13px;">${e.label}</div><div class="tl-sub">${mo2date(e.month)} · Month ${e.month}</div></div></div>`).join(''):'<div style="color:var(--muted);font-size:12px;padding:8px 0;">Set your goals to see the timeline.</div>';
+  }
+
+  const maxGM=Math.max(carMo||0,moveMo||0,12);
+  mkChart('goalsChart','line',{
+    labels:Array.from({length:maxGM+1},(_,i)=>i%3===0?(i===0?'Now':`Mo ${i}`):''),
+    datasets:[
+      {label:'Car fund',data:Array.from({length:maxGM+1},(_,i)=>Math.min((p().carSaved||0)+(p().carMonthly||0)*i,p().carTarget||0)),borderColor:'#d4f050',backgroundColor:'rgba(212,240,80,0.08)',fill:true,tension:0.3,pointRadius:0,borderWidth:2},
+      {label:'Move-in',data:Array.from({length:maxGM+1},(_,i)=>Math.min((p().moveSaved||0)+(p().moveMonthly||0)*i,p().moveTarget||0)),borderColor:'#50d4f0',backgroundColor:'rgba(80,212,240,0.08)',fill:true,tension:0.3,pointRadius:0,borderWidth:2},
+    ]
+  },{plugins:{legend:{display:true,labels:{color:'#6a6860',font:{size:11}}}},scales:{x:{ticks:{color:'#6a6860',font:{size:10}},grid:{color:'#2a2a27'}},y:{ticks:{color:'#6a6860',callback:v=>'$'+v.toLocaleString()},grid:{color:'#2a2a27'}}}});
+}
+
+function renderSavings(){
+  const income=(p().job1||0)+(p().job2||0)+(p().otherIncome||0);
+  let expenses=(p().rent||0)+(p().food||0)+(p().internet||0);
+  p().extraExpenses.forEach((e,i)=>{expenses+=e.amount||0;});
+  const debtMin=p().debts.reduce((s,d)=>s+d.payment,0);
+  const leftover=income-expenses-debtMin;
+  const eTarget=p().emergencyTarget||0,eSaved=p().emergencySaved||0,eMonthly=p().emergencyMonthly||0;
+  const eNeeded=Math.max(0,eTarget-eSaved);
+  const ePct=eTarget>0?Math.min(100,Math.round(eSaved/eTarget*100)):0;
+  const eMo=eMonthly>0?Math.ceil(eNeeded/eMonthly):null;
+
+  const er=document.getElementById('emergencyResult');
+  if(er){
+    if(eSaved>=eTarget&&eTarget>0) er.innerHTML=`<span class="cy">✓ Emergency fund complete!</span>`;
+    else if(eMo) er.innerHTML=`<span class="cb">${fmt(eSaved)} of ${fmt(eTarget)}</span> · ${ePct}% funded · <span class="cy">~${eMo} months to goal</span>`;
+    else er.innerHTML=`${fmt(eSaved)} of ${fmt(eTarget)} · ${ePct}% funded`;
+  }
+  const eb=document.getElementById('emergencyBar');
+  if(eb)eb.style.width=ePct+'%';
+
+  // Leftover allocation
+  const ab=document.getElementById('allocationBreakdown');
+  const investAmt=p().investMonthly||0;
+  const savingsAmt=eMonthly||0;
+  const extraDebt=Math.max(0,leftover-investAmt-savingsAmt);
+  const unallocated=Math.max(0,leftover-investAmt-savingsAmt-extraDebt);
+  if(ab){
+    const rows=[
+      {label:'Min debt payments',amt:debtMin,color:'#f05050'},
+      {label:'Emergency savings',amt:savingsAmt,color:'#50d4f0'},
+      {label:'Investing (TFSA/RRSP)',amt:investAmt,color:'#d4f050'},
+      {label:'Extra debt payoff',amt:Math.max(0,leftover-savingsAmt-investAmt),color:'#f0a050'},
+    ].filter(r=>r.amt>0);
+    ab.innerHTML=rows.map(r=>`<div class="row"><span class="lbl">${r.label}</span><span class="val" style="color:${r.color};">${fmt(r.amt)}/mo</span></div>`).join('')+
+      `<div class="row"><span class="lbl" style="color:var(--text);font-weight:500;">Total leftover</span><span class="val ${leftover>=0?'cy':'cr'}" style="font-size:15px;">${fmt(leftover)}/mo</span></div>`;
+  }
+
+  // Savings growth chart
+  const months=Math.max(eMo||12,24);
+  const savData=Array.from({length:months+1},(_,i)=>Math.min(eSaved+eMonthly*i,eTarget||99999));
+  mkChart('savingsChart','line',{
+    labels:Array.from({length:months+1},(_,i)=>i%6===0?(i===0?'Now':`Mo ${i}`):''),
+    datasets:[
+      {label:'Emergency fund',data:savData,borderColor:'#50d4f0',backgroundColor:'rgba(80,212,240,0.1)',fill:true,tension:0.3,pointRadius:0,borderWidth:2},
+      {label:'Target',data:Array(months+1).fill(eTarget),borderColor:'#d4f050',borderDash:[4,4],fill:false,tension:0,pointRadius:0,borderWidth:1.5},
+    ]
+  },{plugins:{legend:{display:true,labels:{color:'#6a6860',font:{size:11}}}},scales:{x:{ticks:{color:'#6a6860',font:{size:10}},grid:{color:'#2a2a27'}},y:{ticks:{color:'#6a6860',callback:v=>'$'+v.toLocaleString()},grid:{color:'#2a2a27'}}}});
+}
+
+function renderInvest(){
+  // Risk profile → return rate
+  const riskRates={conservative:5,balanced:7,growth:9,aggressive:11,custom:null};
+  const rp=p().riskProfile||'balanced';
+  const rp_el=document.getElementById('riskProfile');if(rp_el)rp_el.value=rp;
+  const ir_el=document.getElementById('investReturn');
+  if(rp!=='custom'&&ir_el){ir_el.value=riskRates[rp];ir_el.disabled=(rp!=='custom');}
+  else if(ir_el){ir_el.disabled=false;}
+
+  const im=p().investMonthly||0,ir=(parseFloat(document.getElementById('investReturn')?.value)||p().investReturn||7)/100/12,iy=p().investYears||10;
+  let port=0;const iData=[0],iL=['Start'],iC=[0];
+  for(let m=1;m<=iy*12;m++){port=port*(1+ir)+im;if(m%12===0||m===iy*12){iData.push(Math.round(port));iL.push(`Yr ${Math.round(m/12)}`);iC.push(Math.round(im*m));}}
+  const totC=im*iy*12,gains=port-totC;
+  const is=document.getElementById('investSummary');
+  if(is)is.innerHTML=`<div class="g3" style="margin-bottom:0.75rem;"><div class="card-sm"><div class="card-title">After ${iy} yrs</div><div class="card-val cy">${fmt(port)}</div></div><div class="card-sm"><div class="card-title">Contributed</div><div class="card-val cb">${fmt(totC)}</div></div><div class="card-sm"><div class="card-title">Gains</div><div class="card-val cg">${fmt(gains)}</div><div class="card-sub">${Math.round(gains/Math.max(totC,1)*100)}% return</div></div></div>`;
+  mkChart('investChart','line',{labels:iL,datasets:[
+    {label:'Portfolio',data:iData,borderColor:'#d4f050',backgroundColor:'rgba(212,240,80,0.1)',fill:true,tension:0.4,pointRadius:3,borderWidth:2,pointBackgroundColor:'#d4f050'},
+    {label:'Contributions',data:iC,borderColor:'#50d4f0',borderDash:[4,4],fill:false,tension:0,pointRadius:0,borderWidth:1.5},
+  ]},{plugins:{legend:{display:true,labels:{color:'#6a6860',font:{size:11}}}},scales:{x:{ticks:{color:'#6a6860',font:{size:10}},grid:{color:'#2a2a27'}},y:{ticks:{color:'#6a6860',callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:'#2a2a27'}}}});
+
+  // Portfolio builder summary
+  const portfolio=p().portfolio||[];
+  const totalAlloc=portfolio.reduce((s,pos)=>s+pos.alloc,0);
+  const ps=document.getElementById('portfolioSummary');
+  if(ps){
+    const overUnder=totalAlloc===100?'<span class="cg">✓ 100% allocated</span>':totalAlloc>100?`<span class="cr">⚠ ${totalAlloc}% — reduce by ${totalAlloc-100}%</span>`:`<span class="ca">⚠ ${totalAlloc}% — ${100-totalAlloc}% unallocated</span>`;
+    const byAccount={};portfolio.forEach(pos=>{byAccount[pos.account]=(byAccount[pos.account]||0)+pos.alloc;});
+    const acctRows=Object.entries(byAccount).map(([a,pct])=>`<div class="row"><span class="lbl">${a}</span><span class="val">${pct}%</span></div>`).join('');
+    ps.innerHTML=`<div class="card"><div class="row"><span class="lbl">Total allocation</span><span class="val">${overUnder}</span></div>${acctRows}</div>`;
+  }
+
+  // Allocation doughnut
+  if(portfolio.length>0){
+    mkChart('allocationChart','doughnut',{
+      labels:portfolio.map(p=>p.name),
+      datasets:[{data:portfolio.map(p=>p.alloc),backgroundColor:portfolio.map(p=>TYPE_COLORS[p.type]||'#888'),borderWidth:2,borderColor:'#0c0c0b'}]
+    },{plugins:{legend:{display:true,position:'right',labels:{color:'#6a6860',font:{size:11},boxWidth:12,padding:8}}}});
+  }
+
+  // Stock/ETF/Crypto tips
+  const PICKS=[
+    {ticker:'XEQT',type:'ETF',risk:'Low',account:'TFSA',desc:'All-in-one global equity ETF. 100% stocks, ~4,000 companies worldwide. The single best "set and forget" pick for beginners. MER: 0.20%.'},
+    {ticker:'VEQT',type:'ETF',risk:'Low',account:'TFSA',desc:'Vanguard\'s version of XEQT. Same idea — global all-equity, slightly different country weights. Also excellent. MER: 0.24%.'},
+    {ticker:'VFV',type:'ETF',risk:'Medium',account:'TFSA',desc:'S&P 500 index — top 500 US companies (Apple, Microsoft, Amazon, etc.). Higher US concentration than XEQT. Strong long-term performer.'},
+    {ticker:'XQQ',type:'ETF',risk:'Medium-High',account:'TFSA',desc:'Nasdaq-100 ETF — heavy tech weighting (Apple, Nvidia, Meta). Higher growth potential but more volatile than S&P 500.'},
+    {ticker:'ZRE',type:'ETF',risk:'Medium',account:'TFSA/RRSP',desc:'Canadian REIT ETF — real estate investment trusts. Pays monthly dividends (~4–5% yield). Good diversifier once you\'re past the basics.'},
+    {ticker:'SHOP.TO',type:'Stock',risk:'High',account:'TFSA',desc:'Shopify — Canadian tech giant powering millions of e-commerce stores globally. High growth, high volatility. Keep under 5% of portfolio.'},
+    {ticker:'BTC',type:'Crypto',risk:'Very High',account:'Crypto',desc:'Bitcoin — the most established crypto, used as a store of value/"digital gold". Treat as speculative. Only invest what you can afford to lose 80%+ of.'},
+    {ticker:'ETH',type:'Crypto',risk:'Very High',account:'Crypto',desc:'Ethereum — the leading smart contract platform powering DeFi and NFTs. More volatile than BTC but broader use case.'},
+    {ticker:'SOL',type:'Crypto',risk:'Extreme',account:'Crypto',desc:'Solana — faster and cheaper than Ethereum but more centralized. High risk, high potential. Only for experienced crypto investors.'},
+  ];
+  const RISK_COLORS={'Low':'#50f0a0','Medium':'#d4f050','Medium-High':'#f0a050','High':'#f05050','Very High':'#f05050','Extreme':'#f020a0'};
+  const TYPE_ICON={'ETF':'◈','Stock':'◆','Crypto':'⬡'};
+  const st=document.getElementById('stockTips');
+  if(st)st.innerHTML=PICKS.map(pick=>`<div class="card" style="margin-bottom:0.75rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;color:${TYPE_COLORS[pick.type.toLowerCase()]||'#888'};">${TYPE_ICON[pick.type]||'●'}</span>
+        <span style="font-weight:500;font-size:14px;">${pick.ticker}</span>
+        <span class="badge" style="background:${RISK_COLORS[pick.risk]}22;color:${RISK_COLORS[pick.risk]};font-size:9px;">${pick.risk} risk</span>
+      </div>
+      <span style="font-size:10px;color:var(--muted);">${pick.account}</span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6;">${pick.desc}</p>
+  </div>`).join('');
+
+  // Tips
+  const TIPS=[
+    {icon:'💡',title:'Start with one ETF',body:'If you\'re just starting out on Wealthsimple, buy XEQT in your TFSA and put everything there. You don\'t need 10 positions — one diversified ETF beats most actively managed portfolios over 10+ years.'},
+    {icon:'📅',title:'Dollar-cost averaging',body:'Invest a fixed amount every payday regardless of what the market is doing. This is the single most effective beginner strategy. On Wealthsimple you can set up auto-invest to do this automatically.'},
+    {icon:'🇨🇦',title:'TFSA first, always',body:'Your TFSA contribution room accumulates every year you\'re 18+ and a Canadian resident. If you haven\'t maxed previous years, you may have more room than $7,000. Check your CRA My Account to see your exact room.'},
+    {icon:'💰',title:'RRSP for tax savings',body:'With your combined two-job income, your marginal rate is ~29.7%. Every $1,000 you put in RRSP saves you ~$297 in taxes now. The government is essentially giving you a 30% instant return on RRSP contributions.'},
+    {icon:'🔄',title:'Reinvest dividends',body:'On Wealthsimple, enable DRIP (Dividend Reinvestment Plan) so any dividends are automatically reinvested. Compounding works best when nothing leaves the account.'},
+    {icon:'⚠️',title:'Crypto = speculation, not investment',body:'Keep crypto to 5–10% of your portfolio max. BTC and ETH are legitimate assets but can drop 70–80% in bear markets. Never invest money in crypto that you\'d need within 5 years.'},
+    {icon:'📉',title:'Don\'t panic sell',body:'Markets drop — sometimes 30–40%. The biggest mistake beginners make is selling during a crash and locking in losses. If your timeline is 5+ years, crashes are buying opportunities, not emergencies.'},
+    {icon:'🏦',title:'Wealthsimple Cash for savings',body:'Use Wealthsimple Cash for your emergency fund — it earns competitive interest (currently 4%+ for Premium users) and is separate from your investment accounts so you won\'t accidentally spend it.'},
+  ];
+  const it=document.getElementById('investTips');
+  if(it)it.innerHTML=TIPS.map(t=>`<div class="card" style="margin-bottom:0.75rem;">
+    <div style="display:flex;gap:10px;align-items:flex-start;">
+      <span style="font-size:18px;flex-shrink:0;">${t.icon}</span>
+      <div><div style="font-weight:500;font-size:13px;margin-bottom:4px;">${t.title}</div><p style="font-size:12px;color:var(--muted);line-height:1.6;">${t.body}</p></div>
+    </div>
+  </div>`).join('');
+}
+
+function renderShared(){
+  const me=state.ilian,gf=state.lola;
+  const meInc=(me.job1||0)+(me.job2||0)+(me.otherIncome||0);
+  const gfInc=(gf.job1||0)+(gf.job2||0)+(gf.otherIncome||0);
+  const shR=state.shared.rent||2000,rPct=(state.shared.rentPct||100)/100;
+  const shF=state.shared.food||1300,fPct=(state.shared.foodPct||60)/100;
+  const myR=shR*rPct,gfR=shR*(1-rPct),myF=shF*fPct,gfF=shF*(1-fPct);
+  let myEx=0,gfEx=0;(state.shared.extras||[]).forEach(e=>{myEx+=e.total*(e.myPct/100);gfEx+=e.total*(1-e.myPct/100);});
+  const myTot=myR+myF+(me.internet||0)+myEx,gfTot=gfR+gfF+(gf.internet||0)+gfEx;
+  const myL=meInc-myTot,gfL=gfInc-gfTot;
+
+  const ss=document.getElementById('sharedSummary');
+  if(ss)ss.innerHTML=`<div class="g2" style="margin-bottom:0.75rem;"><div class="card-sm"><div class="card-title">Combined income</div><div class="card-val cg">${fmt(meInc+gfInc)}</div></div><div class="card-sm"><div class="card-title">Combined expenses</div><div class="card-val cr">${fmt(myTot+gfTot)}</div></div></div><div class="g2" style="margin-bottom:0.75rem;"><div class="card-sm"><div class="card-title" style="color:var(--ilian);">Ilian leftover</div><div class="card-val ${myL>=0?'cy':'cr'}">${fmt(myL)}</div></div><div class="card-sm"><div class="card-title" style="color:var(--lola);">Lola leftover</div><div class="card-val ${gfL>=0?'cp':'cr'}">${fmt(gfL)}</div></div></div>`;
+
+  const sc=document.getElementById('sharedComparison');
+  if(sc)sc.innerHTML=`<div class="person-card person-ilian"><div style="font-size:12px;font-weight:500;color:var(--ilian);margin-bottom:8px;">Ilian</div><div class="row"><span class="lbl">Income</span><span class="val cg">${fmt(meInc)}/mo</span></div><div class="row"><span class="lbl">Rent share (${Math.round(rPct*100)}%)</span><span class="val cr">-${fmt(myR)}</span></div><div class="row"><span class="lbl">Food share (${Math.round(fPct*100)}%)</span><span class="val cr">-${fmt(myF)}</span></div><div class="row"><span class="lbl">Leftover</span><span class="val ${myL>=0?'cy':'cr'}" style="font-size:15px;">${fmt(myL)}/mo</span></div></div><div class="person-card person-lola"><div style="font-size:12px;font-weight:500;color:var(--lola);margin-bottom:8px;">Lola</div><div class="row"><span class="lbl">Income</span><span class="val cg">${gfInc>0?fmt(gfInc)+'/mo':'Add in Lola\'s profile'}</span></div><div class="row"><span class="lbl">Rent share (${Math.round((1-rPct)*100)}%)</span><span class="val cr">-${fmt(gfR)}</span></div><div class="row"><span class="lbl">Food share (${Math.round((1-fPct)*100)}%)</span><span class="val cr">-${fmt(gfF)}</span></div><div class="row"><span class="lbl">Leftover</span><span class="val ${gfL>=0?'cp':'cr'}" style="font-size:15px;">${gfInc>0?fmt(gfL)+'/mo':'Set Lola\'s income'}</span></div></div>`;
+
+  mkChart('sharedChart','bar',{labels:['Ilian','Lola'],datasets:[{label:'Income',data:[meInc,gfInc],backgroundColor:['rgba(212,240,80,0.7)','rgba(240,80,176,0.7)'],borderWidth:0,borderRadius:3},{label:'Expenses',data:[myTot,gfTot],backgroundColor:['rgba(240,80,80,0.5)','rgba(240,80,80,0.5)'],borderWidth:0,borderRadius:3}]},{plugins:{legend:{display:true,labels:{color:'#6a6860',font:{size:11}}}},scales:{x:{ticks:{color:'#6a6860'},grid:{color:'#2a2a27'}},y:{ticks:{color:'#6a6860',callback:v=>'$'+v.toLocaleString()},grid:{color:'#2a2a27'}}}});
+}
+
+function renderNetworth(){
+  const totalAssets=p().assets.reduce((s,a)=>s+(a.value||0),0);
+  const debtLiab=p().debts.reduce((s,d)=>s+(d.balance||0),0);
+  const extraLiab=p().liabilities.reduce((s,l)=>s+(l.value||0),0);
+  const totalLiab=debtLiab+extraLiab,nw=totalAssets-totalLiab;
+  const ns=document.getElementById('networthSummary');
+  if(ns)ns.innerHTML=`<div class="g3" style="margin-bottom:0.75rem;"><div class="card-sm"><div class="card-title">Assets</div><div class="card-val cg">${fmt(totalAssets)}</div></div><div class="card-sm"><div class="card-title">Liabilities</div><div class="card-val cr">${fmt(totalLiab)}</div><div class="card-sub">${fmt(debtLiab)} from debts</div></div><div class="card-sm"><div class="card-title">Net worth</div><div class="card-val ${nw>=0?'cy':'cr'}">${fmt(nw)}</div></div></div>${nw<0?'<div class="alert a-info" style="font-size:11px;">Negative is normal when you have debts — it improves fast as you pay them off.</div>':''}`;
+  const labels=[...p().assets.map(a=>a.name),...p().debts.map(d=>d.name),...p().liabilities.map(l=>l.name)];
+  const vals=[...p().assets.map(a=>a.value||0),...p().debts.map(d=>-(d.balance||0)),...p().liabilities.map(l=>-(l.value||0))];
+  const colors=[...p().assets.map(()=>'rgba(80,240,160,0.7)'),...p().debts.map(()=>'rgba(240,80,80,0.6)'),...p().liabilities.map(()=>'rgba(240,80,80,0.4)')];
+  mkChart('networthChart','bar',{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0,borderRadius:3}]},scaleOpts());
+}
+
+window.renderNetworth = renderNetworth;
+
+function renderTax(){
+  const g1=p().taxJob1||0,g2=p().taxJob2||0,rrsp=p().taxRRSP||0,other=p().taxOther||0;
+  const combined=g1+g2-rrsp-other;
+  if(!combined){const tr=document.getElementById('taxResult');if(tr)tr.innerHTML='<div class="alert a-info">Enter your gross salaries above.</div>';return;}
+  const rC=calcTax(combined),rJ1=calcTax(Math.max(0,g1-rrsp-other)),rJ2=calcTax(g2);
+  const withheld=rJ1.total+rJ2.total,gap=rC.total-withheld,gapMo=gap/12;
+  const tr=document.getElementById('taxResult');
+  if(tr)tr.innerHTML=`<div class="card"><div class="row"><span class="lbl">Combined gross</span><span class="val">${fmt(g1+g2)}</span></div><div class="row"><span class="lbl">RRSP deduction</span><span class="val cg">-${fmt(rrsp)}</span></div><div class="row"><span class="lbl">Taxable income</span><span class="val">${fmt(combined)}</span></div><div class="row"><span class="lbl">Federal tax</span><span class="val cr">-${fmt(rC.fed)}</span></div><div class="row"><span class="lbl">BC provincial tax</span><span class="val cr">-${fmt(rC.bc)}</span></div><div class="row"><span class="lbl">CPP</span><span class="val cr">-${fmt(rC.cpp)}</span></div><div class="row"><span class="lbl">EI</span><span class="val cr">-${fmt(rC.ei)}</span></div><div class="row"><span class="lbl">Annual net</span><span class="val cy" style="font-size:15px;">${fmt(rC.net)}</span></div><div class="row"><span class="lbl">Effective rate</span><span class="val">${(Math.round(rC.rate*10)/10).toFixed(1)}%</span></div></div>`;
+  const td=document.getElementById('td1Advice');
+  if(td)td.innerHTML=gap>0?`<div class="alert a-warn" style="margin-bottom:0.75rem;">⚠ Employers will withhold ~${fmt(withheld)} but you owe ${fmt(rC.total)} — gap of <b>${fmt(gap)}</b>.</div><div class="row"><span class="lbl">Extra to withhold at Job 2</span><span class="val ca">${fmt(gapMo)}/month</span></div><p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;">Fill out a new <b style="color:var(--text);">TD1 form</b> at Job 2 and write <b style="color:var(--accent);">${fmt(gapMo)}</b>/month in the "Additional tax" field to avoid owing at filing.</p>`:`<div class="alert a-ok">✓ Withholding looks on track — you may get a small refund.</div>`;
+}
+window.renderTax = renderTax;
+
+function renderCheckin(){
+  const cl=document.getElementById('checkinList');if(!cl)return;
+  const entries=p().checkins||[];
+  if(!entries.length){cl.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0;">No check-ins yet. Log your first month!</div>';return;}
+  cl.innerHTML=entries.map((e,i)=>`<div class="ci-entry"><div class="ci-header"><span class="tl-sub">${e.date}</span><button class="rm-btn" onclick="p().checkins.splice(${i},1);pushProfile();renderCheckin()">×</button></div><div class="g4" style="margin-bottom:${e.notes?'8px':'0'};"><div><div style="font-size:10px;color:var(--muted);">Income</div><div class="cg" style="font-weight:500;">${fmt(e.income)}</div></div><div><div style="font-size:10px;color:var(--muted);">Expenses</div><div class="cr" style="font-weight:500;">${fmt(e.expenses)}</div></div><div><div style="font-size:10px;color:var(--muted);">Debt paid</div><div class="ca" style="font-weight:500;">${fmt(e.debt)}</div></div><div><div style="font-size:10px;color:var(--muted);">Saved</div><div class="cy" style="font-weight:500;">${fmt(e.savings)}</div></div></div>${e.notes?`<div style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;">${e.notes}</div>`:''}</div>`).join('');
+  const sorted=[...entries].reverse();
+  mkChart('checkinChart','line',{labels:sorted.map(e=>e.date),datasets:[{label:'Income',data:sorted.map(e=>e.income),borderColor:'#50f0a0',fill:false,tension:0.3,pointRadius:3,borderWidth:2,pointBackgroundColor:'#50f0a0'},{label:'Expenses',data:sorted.map(e=>e.expenses),borderColor:'#f05050',fill:false,tension:0.3,pointRadius:3,borderWidth:2,pointBackgroundColor:'#f05050'},{label:'Saved',data:sorted.map(e=>e.savings),borderColor:'#d4f050',fill:false,tension:0.3,pointRadius:3,borderWidth:2,pointBackgroundColor:'#d4f050'}]},{plugins:{legend:{display:true,labels:{color:'#6a6860',font:{size:11}}}},scales:{x:{ticks:{color:'#6a6860',font:{size:10},maxRotation:30},grid:{color:'#2a2a27'}},y:{ticks:{color:'#6a6860',callback:v=>'$'+v.toLocaleString()},grid:{color:'#2a2a27'}}}});
+}
+window.renderCheckin = renderCheckin;
+
+window.addCheckin=()=>{
+  const entry={date:document.getElementById('ciDate').value,income:parseFloat(document.getElementById('ciIncome').value)||0,expenses:parseFloat(document.getElementById('ciExpenses').value)||0,debt:parseFloat(document.getElementById('ciDebt').value)||0,savings:parseFloat(document.getElementById('ciSavings').value)||0,notes:document.getElementById('ciNotes').value};
+  if(!entry.date){showToast('Please pick a date');return;}
+  if(!p().checkins)p().checkins=[];
+  p().checkins.unshift(entry);
+  ['ciIncome','ciExpenses','ciDebt','ciSavings','ciNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  pushProfile(); renderCheckin(); showToast('Check-in saved ✓');
+};
+
+window.exportPDF=()=>{window.print();};
+window.exportJSON=()=>{const a=document.createElement('a');a.href='data:application/json,'+encodeURIComponent(JSON.stringify(state,null,2));a.download='financial-planner-backup.json';a.click();};
+window.importJSON=(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);set(dbRef,d).then(()=>showToast('Restored! ✓'));}catch{showToast('Invalid file');}};r.readAsText(f);};
+window.exportPDF = window.exportPDF;
+window.switchPanel = window.switchPanel;
+window.switchProfile = window.switchProfile;
+
+document.getElementById('loadingStatus').textContent = 'Loading your data...';
+</script>
+</body>
+</html>

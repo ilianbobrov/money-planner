@@ -225,6 +225,19 @@ canvas{width:100%!important;}
   </div>
 </div>
 
+<!-- PROFILE PICKER (shown after load if no saved profile) -->
+<div class="app" id="pickerScreen" style="display:none;">
+  <div class="loading">
+    <div class="loading-logo" style="margin-bottom:0.5rem;">Ilian <em>&</em> Lola</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:2rem;letter-spacing:0.05em;">Who are you?</p>
+    <div style="display:flex;gap:1rem;">
+      <button onclick="choosePerson('ilian')" style="background:var(--surface);border:1px solid var(--ilian);color:var(--ilian);font-family:var(--font-m);font-size:14px;padding:14px 32px;border-radius:var(--radius);cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;">Ilian</button>
+      <button onclick="choosePerson('lola')" style="background:var(--surface);border:1px solid var(--lola);color:var(--lola);font-family:var(--font-m);font-size:14px;padding:14px 32px;border-radius:var(--radius);cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;">Lola</button>
+    </div>
+    <p style="font-size:10px;color:var(--muted2);margin-top:2rem;letter-spacing:0.05em;">We will remember your choice on this device.</p>
+  </div>
+</div>
+
 <!-- MAIN APP (hidden until loaded) -->
 <div class="app" id="mainApp" style="display:none;">
 
@@ -275,6 +288,7 @@ canvas{width:100%!important;}
         <button class="btn" style="font-size:10px;padding:6px 10px;" onclick="document.getElementById('importFile').click()">Restore</button>
       </div>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button class="btn" style="font-size:10px;padding:6px 10px;margin-top:6px;width:100%;" onclick="forgetProfile()">Switch account</button>
     </div>
   </aside>
 
@@ -544,6 +558,7 @@ canvas{width:100%!important;}
       <button class="btn" onclick="switchPanel('checkin');closeMore()">📝 Check-In</button>
       <button class="btn" onclick="exportPDF();closeMore()">📄 Export PDF</button>
       <button class="btn" onclick="exportJSON();closeMore()">💾 Backup</button>
+      <button class="btn" style="grid-column:1/-1;" onclick="forgetProfile();closeMore()">↩ Switch account</button>
     </div>
     <div style="padding:0 0.75rem 0.75rem;text-align:center;">
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
@@ -655,11 +670,36 @@ function showToast(msg) {
 // ── FIREBASE ──────────────────────────────────────────────────────────────────
 const dbRef = ref(db, 'planner');
 
+// ── PROFILE MEMORY ───────────────────────────────────────────────────────────
+function getSavedProfile(){ return localStorage.getItem('fp_person'); }
+function saveProfileChoice(prof){ localStorage.setItem('fp_person', prof); }
+
+window.forgetProfile = function() {
+  localStorage.removeItem('fp_person');
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('pickerScreen').style.display='flex';
+};
+
+window.choosePerson = function(prof) {
+  saveProfileChoice(prof);
+  currentProfile = prof;
+  document.getElementById('pickerScreen').style.display='none';
+  document.getElementById('mainApp').style.display='flex';
+  switchProfile(prof);
+};
+
+function showAppWithProfile(prof) {
+  currentProfile = prof;
+  document.getElementById('loadingScreen').style.display='none';
+  document.getElementById('pickerScreen').style.display='none';
+  document.getElementById('mainApp').style.display='flex';
+  switchProfile(prof);
+}
+
 onValue(dbRef, (snapshot) => {
   const remote = snapshot.val();
   if(remote) {
     isRemoteUpdate = true;
-    // deep merge to preserve any local-only keys
     state.ilian = {...DEFAULT.ilian,...(remote.ilian||{})};
     state.lola = {...DEFAULT.lola,...(remote.lola||{})};
     state.shared = {...DEFAULT.shared,...(remote.shared||{})};
@@ -670,17 +710,28 @@ onValue(dbRef, (snapshot) => {
   }
   // Show app after first load
   if(document.getElementById('loadingScreen').style.display!=='none'){
-    document.getElementById('loadingScreen').style.display='none';
-    document.getElementById('mainApp').style.display='flex';
-    if(!remote) { set(dbRef, state); } // first time — seed DB
+    if(!remote) { set(dbRef, state); }
+    const saved = getSavedProfile();
+    if(saved === 'ilian' || saved === 'lola') {
+      // remembered — go straight in
+      showAppWithProfile(saved);
+    } else {
+      // first time on this device — show picker
+      document.getElementById('loadingScreen').style.display='none';
+      document.getElementById('pickerScreen').style.display='flex';
+    }
   }
 }, (error) => {
   setSyncStatus('error');
-  document.getElementById('loadingStatus').textContent = 'Connection failed. Check Firebase setup.';
-  // Show app anyway with defaults
+  document.getElementById('loadingStatus').textContent = 'Connection failed.';
   setTimeout(()=>{
-    document.getElementById('loadingScreen').style.display='none';
-    document.getElementById('mainApp').style.display='flex';
+    const saved = getSavedProfile();
+    if(saved === 'ilian' || saved === 'lola') {
+      showAppWithProfile(saved);
+    } else {
+      document.getElementById('loadingScreen').style.display='none';
+      document.getElementById('pickerScreen').style.display='flex';
+    }
   },2000);
 });
 

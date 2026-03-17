@@ -46,10 +46,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-m);font-size:
 .sync-label{font-size:10px;color:var(--muted);letter-spacing:0.05em;}
 
 /* ── PROFILE TABS ── */
-.profile-bar{display:flex;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;}
-.profile-tab{flex:1;padding:10px;text-align:center;font-size:12px;letter-spacing:0.05em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-family:var(--font-m);}
-.profile-tab.active-ilian{color:var(--ilian);border-bottom-color:var(--ilian);}
-.profile-tab.active-lola{color:var(--lola);border-bottom-color:var(--lola);}
+
 
 /* ── CONTENT AREA ── */
 .content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 1rem);}
@@ -166,7 +163,6 @@ canvas{width:100%!important;}
   .app{flex-direction:row;}
   .sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);height:100vh;overflow-y:auto;}
   .bottom-nav{display:none;}
-  .profile-bar{display:none;}
   .main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
   .header{border-bottom:1px solid var(--border);}
   .content{padding-bottom:1rem;}
@@ -208,20 +204,20 @@ canvas{width:100%!important;}
   </div>
 </div>
 
+<!-- MAIN APP (hidden until loaded) -->
 <!-- ACCOUNT PICKER -->
 <div class="app" id="pickerScreen" style="display:none;">
   <div class="loading">
     <div class="loading-logo" style="margin-bottom:0.25rem;">Ilian <em>&</em> Lola</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:2.5rem;letter-spacing:0.06em;text-transform:uppercase;">Who are you?</p>
     <div style="display:flex;gap:1rem;">
-      <button id="pickIlian" onclick="choosePerson('ilian')" style="background:var(--surface);border:2px solid var(--ilian);color:var(--ilian);font-family:var(--font-m);font-size:15px;padding:16px 36px;border-radius:var(--radius);cursor:pointer;letter-spacing:0.05em;transition:all 0.15s;">Ilian</button>
-      <button id="pickLola" onclick="choosePerson('lola')" style="background:var(--surface);border:2px solid var(--lola);color:var(--lola);font-family:var(--font-m);font-size:15px;padding:16px 36px;border-radius:var(--radius);cursor:pointer;letter-spacing:0.05em;transition:all 0.15s;">Lola</button>
+      <button onclick="choosePerson('ilian')" style="background:var(--surface);border:2px solid var(--ilian);color:var(--ilian);font-family:var(--font-m);font-size:15px;padding:16px 36px;border-radius:var(--radius);cursor:pointer;letter-spacing:0.05em;">Ilian</button>
+      <button onclick="choosePerson('lola')" style="background:var(--surface);border:2px solid var(--lola);color:var(--lola);font-family:var(--font-m);font-size:15px;padding:16px 36px;border-radius:var(--radius);cursor:pointer;letter-spacing:0.05em;">Lola</button>
     </div>
-    <p style="font-size:10px;color:var(--muted2);margin-top:2rem;">Remembered on this device next time.</p>
+    <p style="font-size:10px;color:var(--muted2);margin-top:2rem;">This device will remember your choice.</p>
   </div>
 </div>
 
-<!-- MAIN APP (hidden until loaded) -->
 <div class="app" id="mainApp" style="display:none;">
 
   <!-- DESKTOP SIDEBAR -->
@@ -229,10 +225,6 @@ canvas{width:100%!important;}
     <div class="sidebar-logo">
       <h1>Ilian <em>&</em> Lola</h1>
       <p>Financial Planner · CAD</p>
-    </div>
-    <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-      <span id="sidebarAccountName" style="font-size:12px;font-weight:500;color:var(--ilian);">—</span>
-      <button onclick="forgetProfile()" style="background:transparent;border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-family:var(--font-m);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:0.04em;transition:all 0.15s;">switch</button>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-nav-item active" onclick="switchPanel('budget')">
@@ -259,11 +251,12 @@ canvas{width:100%!important;}
       <div class="sidebar-nav-item" onclick="switchPanel('checkin')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Check-In
       </div>
-      <div class="sidebar-nav-item" onclick="switchPanel('notes')">
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Notes
-      </div>
     </nav>
     <div class="sidebar-footer">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <div class="sync-dot" id="sdDot"></div>
+        <span class="sync-label" id="sdLabel">Connecting...</span>
+      </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn" style="font-size:10px;padding:6px 10px;" onclick="exportPDF()">PDF</button>
         <button class="btn" style="font-size:10px;padding:6px 10px;" onclick="exportJSON()">Backup</button>
@@ -278,20 +271,18 @@ canvas{width:100%!important;}
     <header class="header">
       <div class="header-logo">Ilian <em>&</em> Lola</div>
       <div class="header-right">
-        <button id="accountBadge" onclick="forgetProfile()" style="background:transparent;border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-family:var(--font-m);font-size:11px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px;letter-spacing:0.04em;">
-          <span id="accountName" style="font-weight:500;">—</span>
+        <button id="accountBadge" onclick="forgetProfile()" style="background:transparent;border:1px solid var(--border2);border-radius:20px;padding:5px 14px;font-family:var(--font-m);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:7px;letter-spacing:0.04em;margin-right:6px;">
+          <span id="accountDot" style="width:7px;height:7px;border-radius:50%;background:var(--ilian);flex-shrink:0;"></span>
+          <span id="accountName" style="font-weight:500;color:var(--text);">—</span>
           <span style="color:var(--muted);font-size:10px;">switch</span>
         </button>
-        <div class="sync-dot" id="syncDot" style="margin-left:6px;"></div>
+        <div class="sync-dot" id="syncDot"></div>
         <span class="sync-label" id="syncLabel">Connecting...</span>
       </div>
     </header>
 
     <!-- PROFILE BAR -->
-    <div class="profile-bar" id="profileBar">
-      <div class="profile-tab active-ilian" id="pt-ilian" onclick="switchProfile('ilian')">Ilian</div>
-      <div class="profile-tab" id="pt-lola" onclick="switchProfile('lola')">Lola</div>
-    </div>
+
 
     <!-- CONTENT -->
     <div class="content">
@@ -507,18 +498,6 @@ canvas{width:100%!important;}
         <div class="chart-wrap"><div class="chart-title">Income vs expenses over time</div><div style="position:relative;height:160px;"><canvas id="checkinChart"></canvas></div></div>
       </div>
 
-      <!-- NOTES -->
-      <div id="panel-notes" class="panel">
-        <div class="note-compose">
-          <textarea id="noteInput" placeholder="Write a note… supports **bold**, *italic*, - lists, ## headings"></textarea>
-          <div class="note-compose-footer">
-            <span class="note-compose-hint">Markdown supported · **bold** *italic* ## heading - list</span>
-            <button class="note-post-btn" onclick="postNote()" id="notePostBtn">Post</button>
-          </div>
-        </div>
-        <div class="notes-feed" id="notesFeed"></div>
-      </div>
-
     </div><!-- /content -->
 
     <!-- BOTTOM NAV (mobile) -->
@@ -532,8 +511,8 @@ canvas{width:100%!important;}
       <button class="nav-btn" onclick="switchPanel('shared')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Shared
       </button>
-      <button class="nav-btn" onclick="switchPanel('notes')">
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Notes
+      <button class="nav-btn" onclick="switchPanel('invest')">
+        <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>Invest
       </button>
       <button class="nav-btn" onclick="switchPanel('more')">
         <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>More
@@ -542,75 +521,30 @@ canvas{width:100%!important;}
   </div><!-- /main-area -->
 </div><!-- /mainApp -->
 
-<!-- NOTE DELETE CONFIRM -->
-<div class="note-confirm" id="noteConfirm">
-  <div class="note-confirm-box">
-    <p>Delete this note?<br>This cannot be undone.</p>
-    <div class="note-confirm-btns">
-      <button class="nc-cancel" onclick="closeNoteConfirm()">Cancel</button>
-      <button class="nc-delete" id="noteDeleteBtn" onclick="executeNoteDelete()">Delete</button>
-    </div>
-  </div>
-</div>
-
-<!-- EASTER EGG OVERLAY -->
-<div class="egg-overlay" id="eggOverlay">
-  <div class="egg-header">
-    <div>
-      <div class="egg-title">Ilian <em>&</em> Lola 🤍</div>
-      <div class="egg-storage" id="eggStorage">Loading storage info...</div>
-      <div class="egg-bar-wrap"><div class="egg-bar" id="eggBar" style="width:0%"></div></div>
-    </div>
-    <button class="egg-close" onclick="closeEgg()">×</button>
-  </div>
-  <div class="egg-grid" id="eggGrid"></div>
-  <div class="egg-footer">
-    <label class="egg-upload-btn" for="eggFileInput" id="eggUploadLabel">+ Add photo or video</label>
-    <input type="file" id="eggFileInput" accept="image/*,video/*" multiple style="display:none" onchange="uploadFiles(this.files)">
-    <span class="egg-uploading" id="eggUploading" style="display:none;">Uploading...</span>
-  </div>
-</div>
-
-<!-- LIGHTBOX -->
-<div class="egg-lightbox" id="eggLightbox" onclick="closeLightbox()">
-  <button class="egg-lightbox-close" onclick="closeLightbox()">×</button>
-  <div id="eggLightboxContent"></div>
-</div>
-
-<!-- DELETE CONFIRM -->
-<div class="egg-confirm" id="eggConfirm">
-  <div class="egg-confirm-box">
-    <p>Delete this? This cannot be undone.</p>
-    <div class="egg-confirm-btns">
-      <button class="egg-cancel" onclick="closeConfirm()">Cancel</button>
-      <button class="egg-delete-confirm" id="eggDeleteBtn" onclick="executeEggDelete()">Delete</button>
-    </div>
-  </div>
-</div>
-
 <!-- MORE MENU (mobile) -->
 <div id="moreMenu" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.7);" onclick="closeMore()">
   <div style="position:absolute;bottom:calc(var(--nav-h) + var(--safe-bottom));left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:0.5rem;" onclick="event.stopPropagation()">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;padding:0.75rem;">
       <button class="btn" onclick="switchPanel('goals');closeMore()">⭐ Goals</button>
-      <button class="btn" onclick="switchPanel('invest');closeMore()">📈 Investing</button>
       <button class="btn" onclick="switchPanel('networth');closeMore()">💰 Net Worth</button>
       <button class="btn" onclick="switchPanel('tax');closeMore()">🧾 Tax / TD1</button>
       <button class="btn" onclick="switchPanel('checkin');closeMore()">📝 Check-In</button>
-      <button class="btn" onclick="switchPanel('notes');closeMore()">💬 Notes</button>
       <button class="btn" onclick="exportPDF();closeMore()">📄 Export PDF</button>
       <button class="btn" onclick="exportJSON();closeMore()">💾 Backup</button>
     </div>
-
+    <div style="padding:0 0.75rem 0.75rem;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
+        <div class="sync-dot" id="moreSyncDot"></div>
+        <span class="sync-label" id="moreSyncLabel">Connecting...</span>
+      </div>
+    </div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject, listAll, getMetadata } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB5CX_m9Yy9XYOpQZwjQ1ZsRFAmTgn4YmE",
@@ -624,20 +558,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const storage = getStorage(app);
-
-// Expose to window for onclick handlers
-window._dbSet = set;
-window._dbUpdate = update;
-window._dbRef = ref;
-window._db = db;
-window._dbSRef = sRef;
-window._dbDeleteObject = deleteObject;
-window._storage = storage;
-window._getDownloadURL = getDownloadURL;
-window._listAll = listAll;
-window._getMetadata = getMetadata;
-window._uploadBytes = uploadBytes;
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT = {
@@ -684,40 +604,32 @@ let charts = {};
 let pushTimeout = null;
 let isRemoteUpdate = false;
 
-// Merge remote profile data, converting Firebase objects-as-arrays back to real arrays
-function mergeProfile(def, remote) {
-  const merged = {...def, ...remote};
-  // Firebase stores arrays as objects {0:val,1:val} — convert back
-  ['debts','extraExpenses','extraGoals','assets','liabilities','portfolio','checkins'].forEach(key => {
-    if(remote[key] && !Array.isArray(remote[key])) {
-      merged[key] = Object.values(remote[key]);
-    } else if(!remote[key]) {
-      merged[key] = def[key] || [];
-    }
-  });
-  return merged;
-}
-
 const p = () => state[currentProfile] || state.ilian;
 const fmt = n => '$' + Math.round(Math.abs(n)).toLocaleString('en-CA');
-const mo2date = m => { const d=new Date(); d.setMonth(d.getMonth()+m); return d.toLocaleDateString('en-CA',{month:'short',year:'numeric'}); };
+const mo2date = m => { const d=new Date(2026,2); d.setMonth(d.getMonth()+m); return d.toLocaleDateString('en-CA',{month:'short',year:'numeric'}); };
 
 // ── SYNC STATUS ───────────────────────────────────────────────────────────────
 function setSyncStatus(status) {
   const dot = document.getElementById('syncDot');
   const lbl = document.getElementById('syncLabel');
+  const sdDot = document.getElementById('sdDot');
+  const sdLbl = document.getElementById('sdLabel');
+  const mdDot = document.getElementById('moreSyncDot');
+  const mdLbl = document.getElementById('moreSyncLabel');
   const bar = document.getElementById('syncBar');
+  const dots = [dot,sdDot,mdDot].filter(Boolean);
+  const lbls = [lbl,sdLbl,mdLbl].filter(Boolean);
   if(status==='live'){
-    if(dot) dot.className='sync-dot live';
-    if(lbl) lbl.textContent='Live';
-    if(bar){ bar.className='synced'; setTimeout(()=>{ bar.className=''; },1500); }
+    dots.forEach(d=>{d.className='sync-dot live';});
+    lbls.forEach(l=>{l.textContent='Live sync';});
+    bar.className=''; bar.className=''; setTimeout(()=>bar.className='synced',10); setTimeout(()=>{bar.style.opacity='0';setTimeout(()=>{bar.className='';bar.style.opacity='';},500);},1500);
   } else if(status==='syncing'){
-    if(dot) dot.className='sync-dot';
-    if(lbl) lbl.textContent='Syncing...';
-    if(bar) bar.className='syncing';
+    dots.forEach(d=>{d.className='sync-dot';});
+    lbls.forEach(l=>{l.textContent='Syncing...';});
+    bar.className='syncing';
   } else {
-    if(dot) dot.className='sync-dot error';
-    if(lbl) lbl.textContent='Offline';
+    dots.forEach(d=>{d.className='sync-dot error';});
+    lbls.forEach(l=>{l.textContent='Offline';});
   }
 }
 
@@ -736,7 +648,6 @@ window.choosePerson = function(prof) {
   document.getElementById('pickerScreen').style.display='none';
   document.getElementById('mainApp').style.display='flex';
   switchProfile(prof);
-  setTimeout(setupEggTrigger, 300);
 };
 
 window.forgetProfile = function() {
@@ -746,57 +657,87 @@ window.forgetProfile = function() {
 };
 
 function launchApp(remote) {
-  if(remote) {
-    state.ilian=mergeProfile(DEFAULT.ilian, remote.ilian||{});
-    state.lola=mergeProfile(DEFAULT.lola, remote.lola||{});
-    state.shared={...DEFAULT.shared,...(remote.shared||{})};
-    setSyncStatus('live');
-  } else {
-    setSyncStatus('error');
+  // Fall back to localStorage backup if Firebase has no data
+  if(!remote) {
+    const backup = localStorage.getItem('fp_backup');
+    if(backup) { try { remote = JSON.parse(backup); } catch(e){} }
   }
-  const saved=localStorage.getItem('fp_person');
-  document.getElementById('loadingScreen').style.display='none';
-  if(saved==='ilian'||saved==='lola'){
-    document.getElementById('mainApp').style.display='flex';
+  // Merge remote data into state FIRST before anything renders
+  if(remote) {
+    state.ilian = Object.assign({}, DEFAULT.ilian, remote.ilian || {});
+    state.lola  = Object.assign({}, DEFAULT.lola,  remote.lola  || {});
+    state.shared= Object.assign({}, DEFAULT.shared, remote.shared|| {});
+    // preserve arrays (Object.assign does shallow copy, arrays need explicit handling)
+    if(remote.ilian && remote.ilian.debts)          state.ilian.debts          = remote.ilian.debts;
+    if(remote.ilian && remote.ilian.extraExpenses)  state.ilian.extraExpenses  = remote.ilian.extraExpenses;
+    if(remote.ilian && remote.ilian.extraGoals)     state.ilian.extraGoals     = remote.ilian.extraGoals;
+    if(remote.ilian && remote.ilian.assets)         state.ilian.assets         = remote.ilian.assets;
+    if(remote.ilian && remote.ilian.liabilities)    state.ilian.liabilities    = remote.ilian.liabilities;
+    if(remote.ilian && remote.ilian.checkins)       state.ilian.checkins       = remote.ilian.checkins;
+    if(remote.lola  && remote.lola.debts)           state.lola.debts           = remote.lola.debts;
+    if(remote.lola  && remote.lola.extraExpenses)   state.lola.extraExpenses   = remote.lola.extraExpenses;
+    if(remote.lola  && remote.lola.extraGoals)      state.lola.extraGoals      = remote.lola.extraGoals;
+    if(remote.lola  && remote.lola.assets)          state.lola.assets          = remote.lola.assets;
+    if(remote.lola  && remote.lola.liabilities)     state.lola.liabilities     = remote.lola.liabilities;
+    if(remote.lola  && remote.lola.checkins)        state.lola.checkins        = remote.lola.checkins;
+    if(remote.shared && remote.shared.extras)       state.shared.extras        = remote.shared.extras;
+  }
+  const saved = localStorage.getItem('fp_person');
+  document.getElementById('loadingScreen').style.display = 'none';
+  if(saved === 'ilian' || saved === 'lola') {
+    document.getElementById('mainApp').style.display = 'flex';
     switchProfile(saved);
   } else {
-    document.getElementById('pickerScreen').style.display='flex';
+    document.getElementById('pickerScreen').style.display = 'flex';
   }
-  setTimeout(setupEggTrigger, 500);
 }
 
-let launched = false;
-let lastOwnSave = 0;
+let _launched = false;
+// Fallback: if Firebase doesn't respond in 5s, show app anyway using local data
+setTimeout(()=>{
+  if(!_launched){
+    _launched = true;
+    setSyncStatus('error');
+    const saved = localStorage.getItem('fp_person');
+    const backup = localStorage.getItem('fp_backup');
+    if(document.getElementById('loadingScreen').style.display !== 'none' ||
+       document.getElementById('pickerScreen').style.display !== 'none') {
+      launchApp(backup ? JSON.parse(backup) : null);
+    }
+  }
+}, 5000);
 onValue(dbRef, (snapshot) => {
   const remote = snapshot.val();
-  if(!launched) {
-    // first load — show the app
-    launched = true;
+  if(!_launched) {
+    _launched = true;
     if(!remote) set(dbRef, state);
     launchApp(remote);
-    return;
-  }
-  // subsequent fires — ignore if caused by our own recent save (within 4s)
-  if(Date.now() - lastOwnSave < 4000) {
-    setSyncStatus('live');
-    return;
-  }
-  // genuine update from the other person's device
-  if(remote) {
-    isRemoteUpdate = true;
-    state.ilian=mergeProfile(DEFAULT.ilian, remote.ilian||{});
-    state.lola=mergeProfile(DEFAULT.lola, remote.lola||{});
-    state.shared={...DEFAULT.shared,...(remote.shared||{})};
-    loadInputs();
-    renderAll();
-    setSyncStatus('live');
-    isRemoteUpdate = false;
-    const other = currentProfile === 'ilian' ? 'Lola' : 'Ilian';
-    showToast(other + ' updated something ✓');
+  } else {
+    if(remote) {
+      isRemoteUpdate = true;
+      state.ilian = Object.assign({}, DEFAULT.ilian, remote.ilian || {});
+      state.lola  = Object.assign({}, DEFAULT.lola,  remote.lola  || {});
+      state.shared= Object.assign({}, DEFAULT.shared, remote.shared|| {});
+      if(remote.ilian && remote.ilian.debts)         state.ilian.debts         = remote.ilian.debts;
+      if(remote.ilian && remote.ilian.extraExpenses) state.ilian.extraExpenses = remote.ilian.extraExpenses;
+      if(remote.ilian && remote.ilian.extraGoals)    state.ilian.extraGoals    = remote.ilian.extraGoals;
+      if(remote.ilian && remote.ilian.assets)        state.ilian.assets        = remote.ilian.assets;
+      if(remote.ilian && remote.ilian.liabilities)   state.ilian.liabilities   = remote.ilian.liabilities;
+      if(remote.ilian && remote.ilian.checkins)      state.ilian.checkins      = remote.ilian.checkins;
+      if(remote.lola  && remote.lola.debts)          state.lola.debts          = remote.lola.debts;
+      if(remote.lola  && remote.lola.extraExpenses)  state.lola.extraExpenses  = remote.lola.extraExpenses;
+      if(remote.lola  && remote.lola.extraGoals)     state.lola.extraGoals     = remote.lola.extraGoals;
+      if(remote.lola  && remote.lola.assets)         state.lola.assets         = remote.lola.assets;
+      if(remote.lola  && remote.lola.liabilities)    state.lola.liabilities    = remote.lola.liabilities;
+      if(remote.lola  && remote.lola.checkins)       state.lola.checkins       = remote.lola.checkins;
+      if(remote.shared && remote.shared.extras)      state.shared.extras       = remote.shared.extras;
+      loadInputs(); renderAll(); setSyncStatus('live');
+      isRemoteUpdate = false;
+    }
   }
 }, (error) => {
-  if(!launched){ launched=true; launchApp(null); }
   setSyncStatus('error');
+  if(!_launched){ _launched=true; launchApp(null); }
 });
 
 function pushProfile() {
@@ -805,11 +746,11 @@ function pushProfile() {
   setSyncStatus('syncing');
   clearTimeout(pushTimeout);
   pushTimeout = setTimeout(()=>{
-    lastOwnSave = Date.now();
+    localStorage.setItem('fp_backup', JSON.stringify(state));
     update(ref(db,'planner'),{[currentProfile]:state[currentProfile]})
-      .then(()=>{ setSyncStatus('live'); showToast('Saved ✓'); })
-      .catch(()=>setSyncStatus('error'));
-  }, 800);
+      .then(()=>{ setSyncStatus('live'); showToast('Saved ✓'); renderAll(); })
+      .catch(()=>{ setSyncStatus('error'); showToast('Saved locally ✓'); });
+  }, 600);
 }
 
 function pushShared() {
@@ -818,11 +759,10 @@ function pushShared() {
   setSyncStatus('syncing');
   clearTimeout(pushTimeout);
   pushTimeout = setTimeout(()=>{
-    lastOwnSave = Date.now();
     update(ref(db,'planner'),{shared:state.shared})
-      .then(()=>{ setSyncStatus('live'); })
+      .then(()=>{ setSyncStatus('live'); renderShared(); })
       .catch(()=>setSyncStatus('error'));
-  }, 800);
+  }, 600);
 }
 
 window.pushProfile = pushProfile;
@@ -862,34 +802,25 @@ window.switchPanel = function(name) {
   const panel=document.getElementById('panel-'+name);
   if(panel){panel.classList.add('active');panel.scrollTop=0;}
   document.querySelectorAll('.nav-btn').forEach((b,i)=>{
-    const names=['budget','debts','shared','notes','more'];
+    const names=['budget','debts','shared','invest','more'];
     b.classList.toggle('active',names[i]===name);
   });
   document.querySelectorAll('.sidebar-nav-item').forEach((b,i)=>{
-    const names=['budget','debts','goals','invest','shared','networth','tax','checkin','notes'];
+    const names=['budget','debts','goals','invest','shared','networth','tax','checkin'];
     b.classList.toggle('active',names[i]===name);
   });
-  // only render the panel we just switched to
-  const panelRenders = {
-    budget:()=>{renderBudget();renderSavings();},
-    debts:renderDebts, goals:renderGoals, invest:renderInvest,
-    shared:renderShared, networth:renderNetworth, tax:renderTax,
-    checkin:renderCheckin, notes:()=>{}
-  };
-  if(panelRenders[name]) setTimeout(panelRenders[name], 30);
+  setTimeout(()=>renderAll(),50);
 };
 window.closeMore = function(){document.getElementById('moreMenu').style.display='none';};
 
 window.switchProfile = function(prof) {
   syncInputsToState();
-  currentProfile = prof;
-  document.getElementById('pt-ilian').className='profile-tab'+(prof==='ilian'?' active-ilian':'');
-  document.getElementById('pt-lola').className='profile-tab'+(prof==='lola'?' active-lola':'');
+  currentProfile = prof==='shared'?'ilian':prof;
   // update account badge
-  const name = prof.charAt(0).toUpperCase()+prof.slice(1);
-  const color = prof==='ilian'?'var(--ilian)':'var(--lola)';
-  const ab=document.getElementById('accountName'); if(ab){ab.textContent=name;ab.style.color=color;}
-  const sb=document.getElementById('sidebarAccountName'); if(sb){sb.textContent=name;sb.style.color=color;}
+  const _name = prof.charAt(0).toUpperCase()+prof.slice(1);
+  const _color = prof==='ilian'?'var(--ilian)':'var(--lola)';
+  const _n=document.getElementById('accountName'); if(_n){_n.textContent=_name;}
+  const _d=document.getElementById('accountDot'); if(_d){_d.style.background=_color;}
   loadInputs(); renderAll();
 };
 
@@ -1320,314 +1251,42 @@ window.exportPDF = window.exportPDF;
 window.switchPanel = window.switchPanel;
 window.switchProfile = window.switchProfile;
 
-document.getElementById('loadingStatus').textContent = 'Loading your data...';
-
-// ── NOTES ────────────────────────────────────────────────────────────────────────
-const notesRef = ref(db, 'notes'); window._notesRef = notesRef;
-
-// Listen for real-time note updates
-onValue(notesRef, (snapshot) => { if(currentPanel==='notes') renderNotes(snapshot.val()); else window._pendingNotes=snapshot.val(); });
-
-window.postNote = async function() {
-  const input = document.getElementById('noteInput');
-  const text = input.value.trim();
-  if(!text) return;
-  const btn = document.getElementById('notePostBtn');
-  btn.disabled = true;
-  const note = { author: currentProfile, text, timestamp: Date.now() };
-  const newRef = window._dbRef(window._db, 'notes/' + Date.now() + '_' + Math.random().toString(36).slice(2));
-  await window._dbSet(newRef, note);
-  input.value = '';
-  btn.disabled = false;
-};
-
-// Post on Ctrl+Enter / Cmd+Enter
-document.addEventListener('keydown', (e) => {
-  if((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    const active = document.activeElement;
-    if(active && active.id === 'noteInput') postNote();
-    if(active && active.classList.contains('note-edit-area')) {
-      const id = active.dataset.id;
-      if(id) saveEdit(id, active.value);
-    }
-  }
-});
-
-function timeAgo(ts) {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60000);
-  const h = Math.floor(diff / 3600000);
-  const d = Math.floor(diff / 86400000);
-  if(m < 1) return 'just now';
-  if(m < 60) return m + 'm ago';
-  if(h < 24) return h + 'h ago';
-  if(d < 7) return d + 'd ago';
-  return new Date(ts).toLocaleDateString('en-CA', {month:'short',day:'numeric'});
-}
-
-function renderNotes(notesObj) {
-  const feed = document.getElementById('notesFeed');
-  if(!feed) return;
-  if(!notesObj || !Object.keys(notesObj).length) {
-    feed.innerHTML = '<div class="note-empty">No notes yet.<br>Write the first one above. 🤍</div>';
-    return;
-  }
-  // sort newest first
-  const sorted = Object.entries(notesObj).sort((a,b) => b[1].timestamp - a[1].timestamp);
-  feed.innerHTML = '';
-  sorted.forEach(([id, note]) => {
-    const isOwn = note.author === currentProfile;
-    const authorLabel = note.author.charAt(0).toUpperCase() + note.author.slice(1);
-    // store text for edit access
-    if(!window._editTexts) window._editTexts = {};
-    window._editTexts[id] = note.text;
-    const div = document.createElement('div');
-    div.className = 'note-card note-' + note.author;
-    div.id = 'note-' + id;
-    div.innerHTML = `
-      <div class="note-header">
-        <span class="note-author ${note.author}">${authorLabel}</span>
-        <span class="note-time">${timeAgo(note.timestamp)}${note.edited?' · edited':''}</span>
-      </div>
-      <div class="note-body" id="note-body-${id}">${marked.parse(note.text)}</div>
-      ${isOwn ? `
-      <div class="note-actions">
-        <button class="note-edit-btn" onclick="startEdit('${id}')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Edit
-        </button>
-        <button class="note-del-btn" onclick="confirmNoteDelete('${id}')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          Delete
-        </button>
-      </div>` : ''}
-    `;
-    feed.appendChild(div);
-  });
-}
-
-// store text per id for edit access from onclick
-window._editTexts = {};
-
-window.startEdit = function(id) {
-  const body = document.getElementById('note-body-' + id);
-  const card = document.getElementById('note-' + id);
-  if(!body || !card) return;
-  // use text already stored when note was rendered
-  const currentText = window._editTexts[id] || '';
-  body.style.display = 'none';
-  card.querySelectorAll('.note-actions').forEach(a => a.style.display='none');
-  const editWrap = document.createElement('div');
-  editWrap.id = 'edit-wrap-' + id;
-  editWrap.style.marginTop = '8px';
-  const ta = document.createElement('textarea');
-  ta.className = 'note-edit-area';
-  ta.id = 'ta-' + id;
-  ta.value = currentText;
-  const btns = document.createElement('div');
-  btns.style.cssText = 'display:flex;gap:6px;margin-top:6px;';
-  const saveBtn = document.createElement('button');
-  saveBtn.className = 'note-save-btn';
-  saveBtn.textContent = 'Save';
-  saveBtn.onclick = () => window.saveEdit(id);
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'note-cancel-btn';
-  cancelBtn.textContent = 'Cancel';
-  cancelBtn.onclick = () => window.cancelEdit(id);
-  btns.appendChild(saveBtn);
-  btns.appendChild(cancelBtn);
-  editWrap.appendChild(ta);
-  editWrap.appendChild(btns);
-  card.appendChild(editWrap);
-  ta.focus();
-};
-
-window.saveEdit = async function(id) {
-  const ta = document.getElementById('ta-' + id);
-  if(!ta) return;
-  const newText = ta.value.trim();
-  if(!newText) return;
-  const saveBtn = ta.parentElement.querySelector('.note-save-btn');
-  if(saveBtn) { saveBtn.textContent = 'Saving...'; saveBtn.disabled = true; }
-  try {
-    await window._dbUpdate(window._dbRef(window._db, 'notes/' + id), {text: newText, edited: Date.now()});
-    window.cancelEdit(id);
-  } catch(e) {
-    if(saveBtn) { saveBtn.textContent = 'Save'; saveBtn.disabled = false; }
-  }
-};
-
-window.cancelEdit = function(id) {
-  const body = document.getElementById('note-body-' + id);
-  const card = document.getElementById('note-' + id);
-  const wrap = document.getElementById('edit-wrap-' + id);
-  if(wrap) wrap.remove();
-  if(body) body.style.display = '';
-  if(card) card.querySelectorAll('.note-actions').forEach(a => a.style.display='');
-};
-
-let pendingNoteDelete = null;
-window.confirmNoteDelete = function(id) {
-  pendingNoteDelete = id;
-  document.getElementById('noteConfirm').classList.add('open');
-};
-window.closeNoteConfirm = function() {
-  pendingNoteDelete = null;
-  document.getElementById('noteConfirm').classList.remove('open');
-};
-window.executeNoteDelete = async function() {
-  if(!pendingNoteDelete) return;
-  const btn = document.getElementById('noteDeleteBtn');
-  btn.textContent = 'Deleting...';
-  btn.disabled = true;
-  try {
-    await window._dbSet(window._dbRef(window._db, 'notes/' + pendingNoteDelete), null);
-    closeNoteConfirm();
-  } catch(e) {
-    btn.textContent = 'Delete';
-    btn.disabled = false;
-  }
-};
-
-// ── EASTER EGG ────────────────────────────────────────────────────────────────
-// Hidden trigger: long-press the account badge for 2 seconds
-let eggPressTimer = null;
-function setupEggTrigger() {
-  const badge = document.getElementById('accountBadge');
-  if(!badge) return;
-  badge.addEventListener('mousedown', () => {
-    eggPressTimer = setTimeout(() => { openEgg(); }, 2000);
-  });
-  badge.addEventListener('mouseup', () => clearTimeout(eggPressTimer));
-  badge.addEventListener('mouseleave', () => clearTimeout(eggPressTimer));
-  badge.addEventListener('touchstart', (e) => {
-    eggPressTimer = setTimeout(() => { openEgg(); }, 2000);
-  }, {passive:true});
-  badge.addEventListener('touchend', () => clearTimeout(eggPressTimer));
-}
-
-const STORAGE_LIMIT = 1073741824; // 1GB in bytes
-
-window.openEgg = async function() {
-  document.getElementById('eggOverlay').classList.add('open');
-  await loadGallery();
-  await loadStorageInfo();
-};
-
-window.closeEgg = function() {
-  document.getElementById('eggOverlay').classList.remove('open');
-};
-
-async function loadStorageInfo() {
-  try {
-    const listRef = window._dbSRef(window._storage, 'gallery/');
-    const list = await window._listAll(listRef);
-    let totalBytes = 0;
-    await Promise.all(list.items.map(async item => {
-      const meta = await window._getMetadata(item);
-      totalBytes += meta.size;
-    }));
-    const usedMB = (totalBytes / 1048576).toFixed(1);
-    const usedGB = (totalBytes / STORAGE_LIMIT * 100).toFixed(1);
-    document.getElementById('eggStorage').textContent = `Used ${usedMB} MB of 1 GB`;
-    document.getElementById('eggBar').style.width = Math.min(100, parseFloat(usedGB)) + '%';
-    document.getElementById('eggBar').style.background = parseFloat(usedGB) > 80 ? 'var(--red)' : parseFloat(usedGB) > 60 ? 'var(--accent3)' : 'var(--accent)';
-  } catch(e) { document.getElementById('eggStorage').textContent = 'Storage info unavailable'; }
-}
-
-async function loadGallery() {
-  const grid = document.getElementById('eggGrid');
-  grid.innerHTML = '<div class="egg-empty">Loading your memories... 🤍</div>';
-  try {
-    const listRef = window._dbSRef(window._storage, 'gallery/');
-    const list = await window._listAll(listRef);
-    if(!list.items.length) {
-      grid.innerHTML = '<div class="egg-empty">No photos or videos yet.<br>Tap below to add your first one. 🤍</div>';
-      return;
-    }
-    // sort by name (timestamp-based)
-    const items = [...list.items].sort((a,b) => b.name.localeCompare(a.name));
-    grid.innerHTML = '';
-    await Promise.all(items.map(async item => {
-      const url = await window._getDownloadURL(item);
-      const isVideo = item.name.match(/\.(mp4|mov|avi|webm|mkv)$/i);
-      const div = document.createElement('div');
-      div.className = 'egg-item';
-      if(isVideo) {
-        div.innerHTML = `<video src="${url}" muted playsinline preload="metadata"></video>
-          <span class="egg-vid-badge">VIDEO</span>
-          <button class="egg-del" onclick="confirmDelete('${item.fullPath}', event)">×</button>`;
-        div.querySelector('video').addEventListener('click', () => openLightbox(url, true));
-      } else {
-        div.innerHTML = `<img src="${url}" loading="lazy">
-          <button class="egg-del" onclick="confirmDelete('${item.fullPath}', event)">×</button>`;
-        div.querySelector('img').addEventListener('click', () => openLightbox(url, false));
+// ── INSTANT LOAD FROM LOCALSTORAGE ──────────────────────────────────────────
+// Don't wait for Firebase — load from local backup immediately
+// Firebase will sync in background and update if newer data exists
+(function() {
+  const backup = localStorage.getItem('fp_backup');
+  if(backup) {
+    try {
+      const saved_person = localStorage.getItem('fp_person');
+      // We have local data — show app immediately, Firebase syncs behind the scenes
+      if(saved_person === 'ilian' || saved_person === 'lola') {
+        const parsed = JSON.parse(backup);
+        // Merge into state
+        if(parsed.ilian) {
+          state.ilian = Object.assign({}, DEFAULT.ilian, parsed.ilian);
+          ['debts','extraExpenses','extraGoals','assets','liabilities','checkins'].forEach(k=>{
+            if(parsed.ilian[k]) state.ilian[k] = parsed.ilian[k];
+          });
+        }
+        if(parsed.lola) {
+          state.lola = Object.assign({}, DEFAULT.lola, parsed.lola);
+          ['debts','extraExpenses','extraGoals','assets','liabilities','checkins'].forEach(k=>{
+            if(parsed.lola[k]) state.lola[k] = parsed.lola[k];
+          });
+        }
+        if(parsed.shared) {
+          state.shared = Object.assign({}, DEFAULT.shared, parsed.shared);
+          if(parsed.shared.extras) state.shared.extras = parsed.shared.extras;
+        }
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'flex';
+        switchProfile(saved_person);
       }
-      grid.appendChild(div);
-    }));
-  } catch(e) {
-    grid.innerHTML = '<div class="egg-empty">Could not load gallery.<br>Check your Firebase Storage rules.</div>';
+    } catch(e) { console.warn('Local backup parse error', e); }
   }
-}
-
-window.uploadFiles = async function(files) {
-  if(!files.length) return;
-  const label = document.getElementById('eggUploadLabel');
-  const uploading = document.getElementById('eggUploading');
-  label.style.display = 'none';
-  uploading.style.display = 'block';
-  uploading.textContent = `Uploading 0 of ${files.length}...`;
-  let done = 0;
-  for(const file of files) {
-    const ext = file.name.split('.').pop();
-    const name = `gallery/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const fileRef = window._dbSRef(window._storage, name);
-    await window._uploadBytes(fileRef, file);
-    done++;
-    uploading.textContent = `Uploading ${done} of ${files.length}...`;
-  }
-  uploading.style.display = 'none';
-  label.style.display = 'block';
-  document.getElementById('eggFileInput').value = '';
-  await loadGallery();
-  await loadStorageInfo();
-};
-
-let pendingDeletePath = null;
-window.confirmDelete = function(path, e) {
-  e.stopPropagation();
-  pendingDeletePath = path;
-  document.getElementById('eggConfirm').classList.add('open');
-};
-window.closeConfirm = function() {
-  pendingDeletePath = null;
-  document.getElementById('eggConfirm').classList.remove('open');
-};
-window.executeEggDelete = async function() {
-  if(!pendingDeletePath) return;
-  const btn = document.getElementById('eggDeleteBtn');
-  btn.textContent = 'Deleting...'; btn.disabled = true;
-  try {
-    await window._dbDeleteObject(window._dbSRef(window._storage, pendingDeletePath));
-    closeConfirm();
-    await loadGallery();
-    await loadStorageInfo();
-  } catch(e) { closeConfirm(); }
-  finally { btn.textContent = 'Delete'; btn.disabled = false; }
-};
-
-window.openLightbox = function(url, isVideo) {
-  const lb = document.getElementById('eggLightbox');
-  const content = document.getElementById('eggLightboxContent');
-  content.innerHTML = isVideo
-    ? `<video src="${url}" controls autoplay style="max-width:95vw;max-height:85vh;border-radius:4px;"></video>`
-    : `<img src="${url}" style="max-width:95vw;max-height:85vh;object-fit:contain;border-radius:4px;">`;
-  lb.classList.add('open');
-};
-window.closeLightbox = function() {
-  document.getElementById('eggLightbox').classList.remove('open');
-  document.getElementById('eggLightboxContent').innerHTML = '';
-};
+  document.getElementById('loadingStatus').textContent = 'Connecting to Firebase...';
+})();
 </script>
 </body>
 </html>

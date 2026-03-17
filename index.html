@@ -542,10 +542,10 @@ canvas{width:100%!important;}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-
+<!-- Firebase compat SDK — loads as globals, no module scope issues -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyB5CX_m9Yy9XYOpQZwjQ1ZsRFAmTgn4YmE",
   authDomain: "ilian-lola-planner.firebaseapp.com",
@@ -556,8 +556,8 @@ const firebaseConfig = {
   appId: "1:467329533836:web:7a3a35b68d8c280a6ab8a9"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const firebaseApp = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT = {
@@ -640,7 +640,7 @@ function showToast(msg) {
 }
 
 // ── FIREBASE ──────────────────────────────────────────────────────────────────
-const dbRef = ref(db, 'planner');
+const dbRef = db.ref('planner');
 
 // ── ACCOUNT MEMORY ────────────────────────────────────────────────────────────
 window.choosePerson = function(prof) {
@@ -698,46 +698,42 @@ setTimeout(()=>{
   if(!_launched){
     _launched = true;
     setSyncStatus('error');
-    const saved = localStorage.getItem('fp_person');
     const backup = localStorage.getItem('fp_backup');
-    if(document.getElementById('loadingScreen').style.display !== 'none' ||
-       document.getElementById('pickerScreen').style.display !== 'none') {
-      launchApp(backup ? JSON.parse(backup) : null);
-    }
+    launchApp(backup ? JSON.parse(backup) : null);
   }
 }, 5000);
-onValue(dbRef, (snapshot) => {
+
+function mergeRemote(remote) {
+  if(!remote) return;
+  state.ilian  = Object.assign({}, DEFAULT.ilian,  remote.ilian  || {});
+  state.lola   = Object.assign({}, DEFAULT.lola,   remote.lola   || {});
+  state.shared = Object.assign({}, DEFAULT.shared,  remote.shared || {});
+  ['debts','extraExpenses','extraGoals','assets','liabilities','checkins'].forEach(k=>{
+    if(remote.ilian  && remote.ilian[k])  state.ilian[k]  = remote.ilian[k];
+    if(remote.lola   && remote.lola[k])   state.lola[k]   = remote.lola[k];
+  });
+  if(remote.shared && remote.shared.extras) state.shared.extras = remote.shared.extras;
+}
+
+dbRef.on('value', (snapshot) => {
   const remote = snapshot.val();
   if(!_launched) {
     _launched = true;
-    if(!remote) set(dbRef, state);
+    if(!remote) dbRef.set(state);
+    mergeRemote(remote);
     launchApp(remote);
   } else {
-    if(remote) {
+    if(remote && !isRemoteUpdate) {
       isRemoteUpdate = true;
-      state.ilian = Object.assign({}, DEFAULT.ilian, remote.ilian || {});
-      state.lola  = Object.assign({}, DEFAULT.lola,  remote.lola  || {});
-      state.shared= Object.assign({}, DEFAULT.shared, remote.shared|| {});
-      if(remote.ilian && remote.ilian.debts)         state.ilian.debts         = remote.ilian.debts;
-      if(remote.ilian && remote.ilian.extraExpenses) state.ilian.extraExpenses = remote.ilian.extraExpenses;
-      if(remote.ilian && remote.ilian.extraGoals)    state.ilian.extraGoals    = remote.ilian.extraGoals;
-      if(remote.ilian && remote.ilian.assets)        state.ilian.assets        = remote.ilian.assets;
-      if(remote.ilian && remote.ilian.liabilities)   state.ilian.liabilities   = remote.ilian.liabilities;
-      if(remote.ilian && remote.ilian.checkins)      state.ilian.checkins      = remote.ilian.checkins;
-      if(remote.lola  && remote.lola.debts)          state.lola.debts          = remote.lola.debts;
-      if(remote.lola  && remote.lola.extraExpenses)  state.lola.extraExpenses  = remote.lola.extraExpenses;
-      if(remote.lola  && remote.lola.extraGoals)     state.lola.extraGoals     = remote.lola.extraGoals;
-      if(remote.lola  && remote.lola.assets)         state.lola.assets         = remote.lola.assets;
-      if(remote.lola  && remote.lola.liabilities)    state.lola.liabilities    = remote.lola.liabilities;
-      if(remote.lola  && remote.lola.checkins)       state.lola.checkins       = remote.lola.checkins;
-      if(remote.shared && remote.shared.extras)      state.shared.extras       = remote.shared.extras;
+      mergeRemote(remote);
       loadInputs(); renderAll(); setSyncStatus('live');
       isRemoteUpdate = false;
     }
   }
 }, (error) => {
+  console.error('Firebase error:', error);
   setSyncStatus('error');
-  if(!_launched){ _launched=true; launchApp(null); }
+  if(!_launched){ _launched=true; const b=localStorage.getItem('fp_backup'); launchApp(b?JSON.parse(b):null); }
 });
 
 function pushProfile() {
@@ -747,7 +743,7 @@ function pushProfile() {
   clearTimeout(pushTimeout);
   pushTimeout = setTimeout(()=>{
     localStorage.setItem('fp_backup', JSON.stringify(state));
-    update(ref(db,'planner'),{[currentProfile]:state[currentProfile]})
+    dbRef.update({[currentProfile]:state[currentProfile]})
       .then(()=>{ setSyncStatus('live'); showToast('Saved ✓'); renderAll(); })
       .catch(()=>{ setSyncStatus('error'); showToast('Saved locally ✓'); });
   }, 600);
@@ -759,7 +755,7 @@ function pushShared() {
   setSyncStatus('syncing');
   clearTimeout(pushTimeout);
   pushTimeout = setTimeout(()=>{
-    update(ref(db,'planner'),{shared:state.shared})
+    dbRef.update({shared:state.shared})
       .then(()=>{ setSyncStatus('live'); renderShared(); })
       .catch(()=>setSyncStatus('error'));
   }, 600);
@@ -1246,7 +1242,7 @@ window.addCheckin=()=>{
 
 window.exportPDF=()=>{window.print();};
 window.exportJSON=()=>{const a=document.createElement('a');a.href='data:application/json,'+encodeURIComponent(JSON.stringify(state,null,2));a.download='financial-planner-backup.json';a.click();};
-window.importJSON=(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);set(dbRef,d).then(()=>showToast('Restored! ✓'));}catch{showToast('Invalid file');}};r.readAsText(f);};
+window.importJSON=(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);dbRef.set(d).then(()=>showToast('Restored! ✓'));}catch{showToast('Invalid file');}};r.readAsText(f);};
 window.exportPDF = window.exportPDF;
 window.switchPanel = window.switchPanel;
 window.switchProfile = window.switchProfile;

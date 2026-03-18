@@ -572,6 +572,7 @@ canvas{width:100%!important;}
 // FIREBASE REST + SSE
 // ═══════════════════════════════════════════════════════════════════
 const FB='https://ilian-and-lola-default-rtdb.firebaseio.com/planner';
+let _es=null; // global EventSource reference for cleanup on logout
 const DB={
   read(){return fetch(FB+'.json').then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});},
   set(d){return fetch(FB+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();});},
@@ -581,7 +582,7 @@ const DB={
     const poll=()=>{DB.read().then(data=>{const s=JSON.stringify(data);if(s!==_snap){_snap=s;cb(data);}}).catch(e=>{if(errCb)errCb(e);});};
     const startPoll=()=>{if(_poll)return;poll();_poll=setInterval(poll,3000);};
     try{
-      const es=new EventSource(FB+'.json?accept=text/event-stream');
+      _es=new EventSource(FB+'.json?accept=text/event-stream');const es=_es;
       es.addEventListener('put',e=>{try{const m=JSON.parse(e.data);if(m&&m.data!==undefined){sseOk=true;cb(m.path==='/'?m.data:null);}}catch(err){}});
       es.addEventListener('patch',()=>{DB.read().then(data=>cb(data)).catch(()=>{});});
       es.onerror=()=>{es.close();if(!sseOk)startPoll();};
@@ -607,7 +608,7 @@ let CURR='CAD',USD_RATE=0.74; // approximate CAD→USD rate
 const p=()=>S[WHO];
 const fmt=n=>{const abs=Math.round(Math.abs(n));const val=CURR==='USD'?Math.round(abs*USD_RATE):abs;const sym=CURR==='USD'?'US$':'$';return sym+val.toLocaleString('en-CA');};
 const fmtCAD=n=>'$'+Math.round(Math.abs(n)).toLocaleString('en-CA'); // always CAD for stored calcs
-const mo2d=m=>{const d=new Date(2026,2);d.setMonth(d.getMonth()+m);return d.toLocaleDateString('en-CA',{month:'short',year:'numeric'});};
+const mo2d=m=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+m);return d.toLocaleDateString('en-CA',{month:'short',year:'numeric'});};
 
 function merge(remote){
   if(!remote)return;
@@ -751,7 +752,7 @@ function loadInputs(){
 // ═══════════════════════════════════════════════════════════════════
 const G={
   pick(who){WHO=who;localStorage.setItem('fp_who',who);showApp('live');},
-  logout(){localStorage.removeItem('fp_who');WHO=null;document.getElementById('app').classList.add('hidden');document.getElementById('picker').classList.remove('hidden');},
+  logout(){localStorage.removeItem('fp_who');WHO=null;if(_es){_es.close();_es=null;}document.getElementById('app').classList.add('hidden');document.getElementById('picker').classList.remove('hidden');},
   tab(name){
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
     const panel=document.getElementById('p-'+name);if(panel){panel.classList.add('on');document.getElementById('scroll').scrollTop=0;}
@@ -786,13 +787,13 @@ const G={
   addExp(){const n=prompt('Expense name:');if(!n)return;p().xExp.push({name:n,amount:0});rebuildXExp();D.save();},
   removeExp(i){p().xExp.splice(i,1);rebuildXExp();D.save();},
   addDebt(){p().debts.push({name:'New debt',balance:0,payment:0,rate:0});rebuildDebts();D.save();},
-  removeDebt(i){p().debts.splice(i,1);rebuildDebts();D.save();},
+  removeDebt(i){p().debts.splice(i,1);rebuildDebts();D.save();renderDebts();},
   addSpend(){const n=prompt('Category (e.g. Groceries, Transport, Entertainment):');if(!n)return;p().spendCats.push({name:n,amount:0,color:CAT_COLORS[p().spendCats.length%CAT_COLORS.length]});rebuildSpend();D.save();},
   removeSpend(i){p().spendCats.splice(i,1);rebuildSpend();D.save();renderSpend();},
   addBill(){p().bills.push({name:'',amount:0,dueDay:1,category:'Subscription',freq:'Monthly',notif:false});rebuildBills();D.save();},
   removeBill(i){p().bills.splice(i,1);rebuildBills();D.save();renderBills();},
   addGoal(){const n=prompt('Goal name:');if(!n)return;p().xGoals.push({name:n,target:1000,monthly:200});rebuildGoals();D.save();},
-  removeGoal(i){p().xGoals.splice(i,1);rebuildGoals();D.save();},
+  removeGoal(i){p().xGoals.splice(i,1);rebuildGoals();D.save();renderGoals();},
   addHolding(){p().holdings.push({name:'',type:'ETF',account:'TFSA',units:0,price:0});rebuildHoldings();D.save();},
   removeHolding(i){p().holdings.splice(i,1);rebuildHoldings();D.save();renderInvest();},
   addAsset(){p().assets.push({name:'',value:0});rebuildAssets();D.save();},
@@ -864,8 +865,6 @@ function ch(id,type,data,{legend=false,yFmt=null,cutout=null,extra={}}={}){
 }
 
 // Convenience aliases
-const mkChart=(id,type,data,opts={})=>ch(id,type,data,{extra:opts});
-const legendChart=(id,type,data,opts={})=>ch(id,type,data,{legend:true,extra:opts});
 
 // ═══════════════════════════════════════════════════════════════════
 // AVALANCHE — memoized so 6 calls per renderAll hit cache after first
@@ -1133,7 +1132,7 @@ function renderBudget(){
   const xAmts=[p().rent,p().food,p().internet,...p().xExp.map((e,i)=>parseFloat(document.getElementById('xexp_'+i)?.value)||e.amount||0),...p().debts.map(d=>d.payment),Math.max(0,left)];
   const xLbls=['Rent','Food','Internet',...p().xExp.map(e=>e.name),...p().debts.map(d=>d.name||'Debt'),'Left over'];
   const xColors=[...Array(3+p().xExp.length).fill('#f05050'),...p().debts.map(()=>'#f0a050'),'#d4f050'];
-  mkChart('chBudget','bar',{labels:xLbls,datasets:[{data:xAmts,backgroundColor:xColors,borderWidth:0,borderRadius:3}]},{});
+  ch('chBudget','bar',{labels:xLbls,datasets:[{data:xAmts,backgroundColor:xColors,borderWidth:0,borderRadius:3}]});
 }
 
 function renderSpend(){
@@ -1161,10 +1160,16 @@ function renderDebts(){
   const df=po.length&&po.every(m=>m!==null)?Math.max(...po):null;
   const maxBal=Math.max(...p().debts.map(d=>d.balance),1);
   // Check for newly paid off debts → celebrate
-  p().debts.forEach((d,i)=>{if(d.balance<=0&&!d._celebrated){d._celebrated=true;toast(`🎉 ${d.name||'Debt'} paid off!`,4000);confetti();}});
+  p().debts.forEach((d,i)=>{
+    if(d.balance<=0){
+      const key='cel_'+WHO+'_'+d.name;
+      if(!localStorage.getItem(key)){localStorage.setItem(key,'1');toast('🎉 '+(d.name||'Debt')+' paid off!',4000);confetti();}
+    }
+  });
   const ds=document.getElementById('debtStrategy');
   if(ds){
-    let html=df?`<div class="al al-ok">Debt-free by <b>${mo2d(df)}</b> 🎉 — using ${fmt(extra)}/mo extra.</div>`:`<div class="al al-i">Pay minimums — free up more cash to accelerate.</div>`;
+    if(!p().debts.length){ds.innerHTML='<div class="al al-i">No debts added yet. Use the section above to add your debts and see your payoff strategy.</div>';return;}
+    let html=df?`<div class="al al-ok">Debt-free by <b>${mo2d(df)}</b> (${df} month${df!==1?'s':''}) 🎉 — using ${fmt(extra)}/mo extra.</div>`:`<div class="al al-i">Pay minimums — free up more cash to accelerate.</div>`;
     [...p().debts.map((d,i)=>({...d,i,mo:po[i]}))].sort((a,b)=>b.rate-a.rate).forEach((d,rank)=>{
       const badge=rank===0&&d.rate>0?'<span class="badge br">attack first</span>':rank===1&&d.rate>0?'<span class="badge ba">2nd</span>':d.rate===0?'<span class="badge bg">0% · min only</span>':'<span class="badge bb">later</span>';
       const int=d.rate>0?`~${fmt(d.balance*d.rate/100/12)}/mo interest · `:'';
@@ -1293,6 +1298,10 @@ function renderShared(){
   const sc=document.getElementById('sharedSide');
   if(sc)sc.innerHTML=`<div class="card" style="border-color:rgba(212,240,80,.3);background:rgba(212,240,80,.04);margin-bottom:.75rem;"><div style="font-size:12px;font-weight:500;color:var(--il);margin-bottom:8px;">Ilian</div><div class="row"><span class="rl">Income</span><span class="rv cg">${fmt(mI)}/mo</span></div><div class="row"><span class="rl">Rent (${Math.round(rP*100)}%)</span><span class="rv cr">-${fmt(myR)}</span></div><div class="row"><span class="rl">Food (${Math.round(fP*100)}%)</span><span class="rv cr">-${fmt(myF)}</span></div><div class="row"><span class="rl" style="font-weight:500;color:var(--tx);">Leftover</span><span class="rv ${myL>=0?'cy':'cr'}" style="font-size:15px;">${fmt(myL)}/mo</span></div></div><div class="card" style="border-color:rgba(240,80,176,.3);background:rgba(240,80,176,.04);"><div style="font-size:12px;font-weight:500;color:var(--lo);margin-bottom:8px;">Lola</div><div class="row"><span class="rl">Income</span><span class="rv ${gI>0?'cg':''}">${gI>0?fmt(gI)+'/mo':'Not set — update Lola profile'}</span></div><div class="row"><span class="rl">Rent (${Math.round((1-rP)*100)}%)</span><span class="rv cr">-${fmt(gfR)}</span></div><div class="row"><span class="rl">Food (${Math.round((1-fP)*100)}%)</span><span class="rv cr">-${fmt(gfF)}</span></div><div class="row"><span class="rl" style="font-weight:500;color:var(--tx);">Leftover</span><span class="rv ${gfL>=0?'cp':'cr'}" style="font-size:15px;">${gI>0?fmt(gfL)+'/mo':'Set Lola income first'}</span></div></div>`;
   ch('chShared','bar',{labels:['Ilian','Lola'],datasets:[{label:'Income',data:[mI,gI],backgroundColor:['rgba(212,240,80,.7)','rgba(240,80,176,.7)'],borderWidth:0,borderRadius:3},{label:'Expenses',data:[myTot,gfTot],backgroundColor:['rgba(240,80,80,.5)','rgba(240,80,80,.5)'],borderWidth:0,borderRadius:3}]},{legend:true});
+  // Always sync split incomes from profiles (not just on first load)
+  const si=document.getElementById('splitI'),sl=document.getElementById('splitL');
+  if(si)si.value=(S.ilian.job1||0)+(S.ilian.job2||0)||'';
+  if(sl)sl.value=(S.lola.job1||0)+(S.lola.job2||0)||'';
   renderSplit();
 }
 function renderSplit(){
@@ -1315,7 +1324,7 @@ function renderNW(){
   const totL=dbtL+xL,nw=totA-totL;
   const ns=document.getElementById('nwSummary');
   if(ns)ns.innerHTML=`<div class="g3" style="margin-bottom:.75rem;"><div class="csm"><div class="ctit">Assets</div><div class="cval cg">${fmt(totA)}</div></div><div class="csm"><div class="ctit">Liabilities</div><div class="cval cr">${fmt(totL)}</div><div class="csub">${fmtCAD(dbtL)} from debts</div></div><div class="csm"><div class="ctit">Net worth</div><div class="cval ${nw>=0?'cy':'cr'}">${fmt(nw)}</div></div></div>${nw<0?'<div class="al al-i" style="font-size:11px;">Negative net worth is normal with debts — improves fast as you pay them off.</div>':''}`;
-  mkChart('chNW','bar',{labels:[...p().assets.map(a=>a.name||'Asset'),...p().debts.map(d=>d.name||'Debt'),...p().liabilities.map(l=>l.name||'Liability')],datasets:[{data:[...p().assets.map(a=>a.value||0),...p().debts.map(d=>-(d.balance||0)),...p().liabilities.map(l=>-(l.value||0))],backgroundColor:[...p().assets.map(()=>'rgba(80,240,160,.7)'),...p().debts.map(()=>'rgba(240,80,80,.6)'),...p().liabilities.map(()=>'rgba(240,80,80,.4)')],borderWidth:0,borderRadius:3}]},{});
+  ch('chNW','bar',{labels:[...p().assets.map(a=>a.name||'Asset'),...p().debts.map(d=>d.name||'Debt'),...p().liabilities.map(l=>l.name||'Liability')],datasets:[{data:[...p().assets.map(a=>a.value||0),...p().debts.map(d=>-(d.balance||0)),...p().liabilities.map(l=>-(l.value||0))],backgroundColor:[...p().assets.map(()=>'rgba(80,240,160,.7)'),...p().debts.map(()=>'rgba(240,80,80,.6)'),...p().liabilities.map(()=>'rgba(240,80,80,.4)')],borderWidth:0,borderRadius:3}]});
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1347,7 +1356,7 @@ function renderCheckin(){
   if(entries.length>=1){
     const latest=entries[0];
     const inc=(p().job1||0)+(p().job2||0)+(p().otherInc||0);
-    const planned_exp=(p().rent||0)+(p().food||0)+(p().internet||0)+p().xExp.reduce((s,e)=>s+(e.amount||0),0);
+    const planned_exp=(p().rent||0)+(p().food||0)+(p().internet||0)+p().xExp.reduce((s,e)=>s+(e.amount||0),0)+p().debts.reduce((s,d)=>s+d.payment,0);
     const actual_exp=latest.expenses||0;
     const diff=actual_exp-planned_exp;
     const bvaR=document.getElementById('bvaResult');

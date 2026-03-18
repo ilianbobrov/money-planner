@@ -1019,7 +1019,8 @@ function renderAll(){
 // ═══════════════════════════════════════════════════════════════════
 function renderDash(){
   const inc=(p().job1||0)+(p().job2||0)+(p().otherInc||0);
-  const exp=(p().rent||0)+(p().food||0)+(p().internet||0);
+  const exp=(p().rent||0)+(p().food||0)+(p().internet||0)
+           +(p().xExp||[]).reduce((s,e)=>s+(e.amount||0),0);
   const dmin=p().debts.reduce((s,d)=>s+d.payment,0);
   const left=inc-exp-dmin;
   const tdbt=p().debts.reduce((s,d)=>s+d.balance,0);
@@ -1153,7 +1154,8 @@ function renderSpend(){
 // ═══════════════════════════════════════════════════════════════════
 function renderDebts(){
   const inc=(p().job1||0)+(p().job2||0)+(p().otherInc||0);
-  const exp=(p().rent||0)+(p().food||0)+(p().internet||0);
+  const exp=(p().rent||0)+(p().food||0)+(p().internet||0)
+           +(p().xExp||[]).reduce((s,e)=>s+(e.amount||0),0);
   const dmin=p().debts.reduce((s,d)=>s+d.payment,0);
   const extra=Math.max(0,inc-exp-dmin);
   const po=avalanche(p().debts,extra);
@@ -1192,7 +1194,8 @@ function renderDebts(){
 // ═══════════════════════════════════════════════════════════════════
 function renderGoals(){
   const inc=(p().job1||0)+(p().job2||0)+(p().otherInc||0);
-  const exp=(p().rent||0)+(p().food||0)+(p().internet||0);
+  const exp=(p().rent||0)+(p().food||0)+(p().internet||0)
+           +(p().xExp||[]).reduce((s,e)=>s+(e.amount||0),0);
   const dmin=p().debts.reduce((s,d)=>s+d.payment,0);
   const carN=Math.max(0,(p().carTarget||0)-(p().carSaved||0));
   const carMo=p().carMo>0?Math.ceil(carN/p().carMo):null;
@@ -1372,7 +1375,8 @@ function renderCheckin(){
 function buildPDF(){
   const el=document.getElementById('pdf-pg');if(!el)return;
   const inc=(p().job1||0)+(p().job2||0)+(p().otherInc||0);
-  const exp=(p().rent||0)+(p().food||0)+(p().internet||0);
+  const exp=(p().rent||0)+(p().food||0)+(p().internet||0)
+           +(p().xExp||[]).reduce((s,e)=>s+(e.amount||0),0);
   const dmin=p().debts.reduce((s,d)=>s+d.payment,0);
   const left=inc-exp-dmin,tdbt=p().debts.reduce((s,d)=>s+d.balance,0);
   const totA=p().assets.reduce((s,a)=>s+(a.value||0),0);
